@@ -176,8 +176,61 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                 <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm flex flex-col justify-center`}>
                                     <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">AI Executive Summary</h3>
                                     <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm">
-                                        {data.aiAnalysis.failureExplanation}
+                                        {data.aiAnalysis?.potential_issue || "AI executive summary unavailable."}
                                     </p>
+                                </div>
+                            </div>
+
+                            {/* AI Change Intelligence Panel */}
+                            <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm space-y-6`}>
+                                <div className="border-b border-gray-200 dark:border-[#30363D] pb-4">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI CHANGE INTELLIGENCE</h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5">
+                                        AI-assisted reasoning based on detected code changes and dependency evidence.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">What Changed</h4>
+                                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-mono">
+                                            {data.change ? `${data.change.changeType}: ${data.change.symbol} in ${data.change.file}` : 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Potential Issue</h4>
+                                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                                            {data.aiAnalysis?.potential_issue || "AI remediation unavailable."}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Why This Matters</h4>
+                                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                                            {data.aiAnalysis?.why_it_matters || "AI remediation unavailable."}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Recommended Fix</h4>
+                                        <div className="text-gray-600 dark:text-gray-400 leading-relaxed space-y-1">
+                                            {data.aiAnalysis?.recommended_fixes?.map((fix: string, idx: number) => (
+                                                <div key={idx}>- {fix}</div>
+                                            )) || "AI remediation unavailable."}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Testing Strategy</h4>
+                                        <div className="text-gray-600 dark:text-gray-400 leading-relaxed space-y-1">
+                                            {data.aiAnalysis?.testing_strategy?.map((ts: string, idx: number) => (
+                                                <div key={idx}>- {ts}</div>
+                                            )) || "AI remediation unavailable."}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Safest Migration</h4>
+                                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                                            {data.aiAnalysis?.migration_strategy || "AI remediation unavailable."}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -369,50 +422,60 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                     {activeTab === 'Remediation' && (
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                             <div className="xl:col-span-8 space-y-6">
-                                {/* Card 1 */}
-                                <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl overflow-hidden flex flex-col shadow-sm`}>
-                                    <div className="px-4 py-3 bg-gray-50 dark:bg-[#21262D] border-b border-gray-200 dark:border-[#30363D] flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <Badge variant="critical">Critical</Badge>
-                                            <span className="font-mono text-sm font-bold text-gray-900 dark:text-gray-200">{data.change?.file ? data.change.file.split('/').pop() : 'Affected Component'}</span>
-                                        </div>
-                                        <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400">L1-10</span>
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            {data.aiAnalysis.remediation}
-                                        </p>
-                                        
-                                        <div className="bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D] overflow-hidden text-sm font-mono leading-6">
-                                            <div className="flex text-gray-500 dark:text-gray-400 px-4 py-1">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">1</span>
-                                                <span>// Affected File: {data.change.file}</span>
-                                            </div>
-                                            <div className="flex bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-1 border-l-2 border-red-500">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">2</span>
-                                                <span>- {data.change.oldValue || data.change.symbol}</span>
-                                            </div>
-                                            <div className="flex bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-1 border-l-2 border-green-500">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">3</span>
-                                                <span>+ {data.change.newValue}</span>
-                                            </div>
+                                {/* Gemini AI Remediation Details */}
+                                <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm space-y-6`}>
+                                    <div className="border-b border-gray-200 dark:border-[#30363D] pb-4 flex justify-between items-center">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI REMEDIATION PLAN</h3>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                AI-assisted reasoning based on detected code changes and dependency evidence.
+                                            </p>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Alternative Option */}
-                                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-xl p-6 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 bg-blue-600 text-white px-8 py-1 rotate-45 translate-x-8 translate-y-3 text-[10px] font-bold uppercase tracking-widest shadow-sm">
-                                        Expert Choice
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800/30">
-                                            <CheckCircle size={24} className="fill-current text-blue-100 dark:text-blue-900/40" />
+                                    <div className="space-y-6 text-sm">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-red-600 dark:text-red-400 uppercase tracking-wider text-[11px]">Potential Issue</h4>
+                                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed bg-red-50 dark:bg-red-950/10 p-3 rounded-lg border border-red-100 dark:border-red-950/30">
+                                                {data.aiAnalysis?.potential_issue || "AI remediation unavailable."}
+                                            </p>
                                         </div>
-                                        <div className="space-y-2">
-                                            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400">SAFEST MIGRATION STRATEGY</h3>
-                                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                                                {data.aiAnalysis.migrationAdvice}
+
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Why This Matters</h4>
+                                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                                {data.aiAnalysis?.why_it_matters || "AI remediation unavailable."}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Recommended Fix</h4>
+                                            <div className="text-gray-700 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-[#161B22] p-4 rounded-lg border border-gray-200 dark:border-[#30363D] space-y-2">
+                                                {data.aiAnalysis?.recommended_fixes?.map((fix: string, idx: number) => (
+                                                    <div key={idx} className="flex gap-2">
+                                                        <span className="text-blue-500 font-bold">•</span>
+                                                        <span>{fix}</span>
+                                                    </div>
+                                                )) || "AI remediation unavailable."}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">Testing Strategy</h4>
+                                            <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-2">
+                                                {data.aiAnalysis?.testing_strategy?.map((ts: string, idx: number) => (
+                                                    <div key={idx} className="flex gap-2">
+                                                        <span className="text-green-500 font-bold">✓</span>
+                                                        <span>{ts}</span>
+                                                    </div>
+                                                )) || "AI remediation unavailable."}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-[11px]">Safest Migration Strategy</h4>
+                                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed bg-blue-50 dark:bg-blue-950/10 p-3 rounded-lg border border-blue-100 dark:border-blue-950/30">
+                                                {data.aiAnalysis?.migration_strategy || "AI remediation unavailable."}
                                             </p>
                                         </div>
                                     </div>
@@ -423,10 +486,6 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                 <button onClick={onPromote} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 transition-transform active:scale-95">
                                     <CheckCircle size={18} />
                                     Promote to Baseline Snapshot
-                                </button>
-                                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-transform active:scale-95">
-                                    <Zap className="fill-current" size={18} />
-                                    Execute Complete Plan
                                 </button>
                                 <button onClick={handleCopyComment} className="w-full border border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] py-3 rounded-lg font-bold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors shadow-sm">
                                     Export PR Draft

@@ -320,6 +320,13 @@ def analyze_impact(req: AnalyzeImpactRequest):
 
     # Aggregate blast radius traversal across ALL changed files
     impacted = {}
+    from git import Repo
+    git_repo = None
+    try:
+        git_repo = Repo(path)
+    except Exception:
+        pass
+        
     for change in changes:
         changed_node = None
         # Locate matches in graph
@@ -333,9 +340,22 @@ def analyze_impact(req: AnalyzeImpactRequest):
             if not nx_graph.has_node(changed_node):
                 nx_graph.add_node(changed_node, type="FILE", label=os.path.basename(changed_node))
         
+        # Extract actual git diff patch if available
+        change["diff"] = ""
+        if git_repo and diff_mode_to_use == "git-commit":
+            try:
+                # Capture patch contents for this specific file, limit to 200 lines to avoid token bloating
+                file_diff = git_repo.git.diff("HEAD~1", "HEAD", "--", change.get("file"))
+                change["diff"] = "\n".join(file_diff.splitlines()[:200])
+            except Exception as e:
+                print(f"[API] Error resolving patch for {change.get('file')}: {str(e)}")
+        
         # Blast Radius traversal
         file_impacted = ImpactAnalyzer.analyze_impact(nx_graph, changed_node)
         impacted.update(file_impacted)
+        
+    if git_repo:
+        git_repo.close()
 
     # 5. Extract specific stats for response
     files_affected = set()
@@ -380,7 +400,26 @@ def analyze_impact(req: AnalyzeImpactRequest):
         for imp in sorted_impacts[:3]:
             primary_path.append(imp.get("label", imp.get("id")))
             
-    ai_reasoning = GeminiService.get_ai_reasoning(primary_change, primary_path)
+    # Package actual code diff and deterministic facts context safely
+    context = {
+        "repository": os.path.basename(path),
+        "changes": changes,
+        "primary_path": primary_path,
+        "deterministic_impact": {
+            "direct_dependents": [data["label"] for data in impacted.values() if data.get("impact") == "DIRECT"],
+            "transitive_dependents": [data["label"] for data in impacted.values() if data.get("impact") == "TRANSITIVE"],
+            "affected_apis": list(apis_affected),
+            "existing_tests": [t["name"] for t in tests],
+            "teams": [t["name"] for t in teams],
+            "ci_workflows": [w["name"] for w in ci_workflows]
+        },
+        "risk": {
+            "score": risk["score"],
+            "factors": [f["factor"] for f in risk["breakdown"]]
+        }
+    }
+    
+    ai_reasoning = GeminiService.get_ai_reasoning(context)
     
     # 10. Generate PR Comment (Official Bonus)
     path_formatted = " → ".join([f"`{p}`" for p in primary_path])
