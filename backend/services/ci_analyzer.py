@@ -65,21 +65,7 @@ class CiAnalyzer:
                     "jobs": ["build", "unit-tests", "integration-tests"] if is_backend_wf else ["build", "contract-tests"]
                 })
                 
-        # If no workflows found, return demo fallbacks
         if not affected_workflows:
-            return [
-                {
-                    "name": "backend-ci.yml",
-                    "affected": "YES",
-                    "reason": "Backend DTO/API components are in blast radius.",
-                    "jobs": ["build", "unit-tests", "integration-tests"]
-                },
-                {
-                    "name": "frontend-ci.yml",
-                    "affected": "YES",
-                    "reason": "Frontend API consumer is affected.",
-                    "jobs": ["build", "contract-tests"]
-                }
-            ]
+            return []
             
         return affected_workflows

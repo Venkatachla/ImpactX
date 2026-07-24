@@ -21,7 +21,7 @@ export default function ChangeSelectionView({ onNavigate, baselineData, errorMsg
         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Architecture Mapped Successfully</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Analyze Code Change</h1>
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <span className="flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
                     <span className="text-xs font-mono uppercase tracking-widest font-bold">BASELINE READY</span>
@@ -58,72 +58,31 @@ export default function ChangeSelectionView({ onNavigate, baselineData, errorMsg
             <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 space-y-6">
                 <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Compare & Trace Changes</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Choose to trace changes using native git diff comparisons or simulator scripts.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Select latest commit history analysis comparison mode.</p>
                 </div>
 
                 <div className="space-y-4">
                     <div 
-                        onClick={() => setSelectedChange('git')}
-                        className={`p-5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
-                            selectedChange === 'git' 
-                                ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/10' 
-                                : 'border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] hover:border-blue-300 dark:hover:border-blue-700'
-                        }`}
+                        className="p-5 rounded-xl border-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/10 flex items-start gap-4"
                     >
-                        <div className={`mt-1 shrink-0 ${selectedChange === 'git' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
-                            {selectedChange === 'git' ? <CheckCircle2 size={24} /> : <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600" />}
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="font-bold text-base text-gray-900 dark:text-white">Active Git Diff Mode</h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Automatically extract uncommitted working tree modifications using native git diff.</p>
-                        </div>
-                    </div>
-
-                    <div 
-                        onClick={() => setSelectedChange('git-commit')}
-                        className={`p-5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
-                            selectedChange === 'git-commit' 
-                                ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/10' 
-                                : 'border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] hover:border-blue-300 dark:hover:border-blue-700'
-                        }`}
-                    >
-                        <div className={`mt-1 shrink-0 ${selectedChange === 'git-commit' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
-                            {selectedChange === 'git-commit' ? <CheckCircle2 size={24} /> : <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600" />}
+                        <div className="mt-1 shrink-0 text-blue-600 dark:text-blue-400">
+                            <CheckCircle2 size={24} />
                         </div>
                         <div className="flex-1">
                             <h4 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
                                 <GitCommit size={16} /> Analyze Latest Commit
                             </h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Compare differences between HEAD~1 and HEAD on the active repository branch.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                Analyze what changed in the latest commit and discover its blast radius across services, APIs, tests, teams, and CI (comparing HEAD~1 to HEAD).
+                            </p>
                         </div>
                     </div>
-
-                    {isDemoRepo && (
-                        <div 
-                            onClick={() => setSelectedChange('demo')}
-                            className={`p-5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
-                                selectedChange === 'demo' 
-                                    ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/10' 
-                                    : 'border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] hover:border-blue-300 dark:hover:border-blue-700'
-                            }`}
-                        >
-                            <div className={`mt-1 shrink-0 ${selectedChange === 'demo' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
-                                {selectedChange === 'demo' ? <CheckCircle2 size={24} /> : <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600" />}
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Settings size={16} /> Golden Demo Simulator
-                                </h4>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Simulate the DTO field rename scenario (Rename UserDTO.email &rarr; primaryEmail).</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-[#30363D]">
                 <button 
-                    onClick={() => onNavigate(selectedChange)}
+                    onClick={() => onNavigate('git-commit')}
                     className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
                 >
                     Run Impact Trace

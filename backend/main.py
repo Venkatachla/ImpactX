@@ -239,51 +239,66 @@ def analyze_impact(req: AnalyzeImpactRequest):
     if req.appMode == "real" and diff_mode_to_use == "demo":
         diff_mode_to_use = "git"
         
-    change = ChangeAnalyzer.detect_change(path, diff_mode_to_use)
-    if not change:
+    try:
+        changes = ChangeAnalyzer.detect_change(path, diff_mode_to_use)
+    except Exception as e:
+        error_msg = str(e)
         return {
             "change": None,
-            "risk": {"score": 0, "level": "LOW", "confidence": 100, "breakdown": []},
+            "risk": {"score": 0, "level": "LOW", "confidence": 0, "breakdown": []},
             "summary": {"files": 0, "modules": 0, "services": 0, "apis": 0, "tests": 0, "teams": 0, "ciWorkflows": 0},
-            "graph": {
-                "nodes": [],
-                "edges": []
-            },
+            "graph": {"nodes": [], "edges": []},
             "impacts": [],
             "tests": [],
             "teams": [],
             "ci": [],
             "aiAnalysis": {
-                "failureExplanation": "No local code changes detected.",
-                "remediation": "Modify a source file or check in a commit first.",
+                "failureExplanation": error_msg,
+                "remediation": "Please verify commit history depth and check if HEAD~1 is accessible.",
+                "migrationAdvice": "N/A",
+                "suggestedTest": "N/A"
+            },
+            "prComment": f"⚡ **ImpactX Change Analysis**\n\nComparison failed: {error_msg}"
+        }
+
+    if not changes:
+        return {
+            "change": None,
+            "risk": {"score": 0, "level": "LOW", "confidence": 100, "breakdown": []},
+            "summary": {"files": 0, "modules": 0, "services": 0, "apis": 0, "tests": 0, "teams": 0, "ciWorkflows": 0},
+            "graph": {"nodes": [], "edges": []},
+            "impacts": [],
+            "tests": [],
+            "teams": [],
+            "ci": [],
+            "aiAnalysis": {
+                "failureExplanation": "No code changes detected in this commit or working tree comparison.",
+                "remediation": "Verify modifications have been checked in or run working tree validations.",
                 "migrationAdvice": "N/A",
                 "suggestedTest": "N/A"
             },
             "prComment": "⚡ **ImpactX Change Analysis**\n\nNo changes detected."
         }
 
-    # Find changed node in graph
-    changed_node = None
-    # Look for field node match
-    field_key = f"field:com.example.demo.dto.UserDTO.{change.get('symbol')}"
-    if nx_graph.has_node(field_key):
-        changed_node = field_key
-    else:
-        # Search class/method/file match
+    # Aggregate blast radius traversal across ALL changed files
+    impacted = {}
+    for change in changes:
+        changed_node = None
+        # Locate matches in graph
         for node in nx_graph.nodes:
             if change.get("symbol") in node or change.get("file") in node:
                 changed_node = node
                 break
-                
-    if not changed_node:
-        # File node fallback
-        changed_node = change.get("file")
-        if not nx_graph.has_node(changed_node):
-            nx_graph.add_node(changed_node, type="FILE", label=os.path.basename(changed_node))
+        
+        if not changed_node:
+            changed_node = change.get("file")
+            if not nx_graph.has_node(changed_node):
+                nx_graph.add_node(changed_node, type="FILE", label=os.path.basename(changed_node))
+        
+        # Blast Radius traversal
+        file_impacted = ImpactAnalyzer.analyze_impact(nx_graph, changed_node)
+        impacted.update(file_impacted)
 
-    # 4. Blast Radius BFS Analysis
-    impacted = ImpactAnalyzer.analyze_impact(nx_graph, changed_node)
-    
     # 5. Extract specific stats for response
     files_affected = set()
     services_affected = set()
@@ -294,7 +309,10 @@ def analyze_impact(req: AnalyzeImpactRequest):
         n_type = data["type"]
         raw_path = data["path"] or node_id
         path_str = " -> ".join(raw_path) if isinstance(raw_path, list) else str(raw_path)
-        files_affected.add(path_str)
+        
+        # Ensure only actual source files (java/ts/tsx/js/py) are counted as files, not arbitrary intermediate classes
+        if path_str.endswith((".java", ".ts", ".tsx", ".js", ".py")):
+            files_affected.add(path_str)
         
         if "Service" in node_id:
             services_affected.add(data["label"])
@@ -311,49 +329,63 @@ def analyze_impact(req: AnalyzeImpactRequest):
     tests = TestRecommender.recommend_tests(impacted, scanned["tests"])
     
     # 8. Deterministic Risk
-    risk = RiskEngine.calculate_risk(change, impacted)
+    # Match the primary change out of changes list
+    primary_change = changes[0]
+    risk = RiskEngine.calculate_risk(primary_change, impacted)
     
     # 9. Gemini AI explanation
-    primary_path = [changed_node, "class:com.example.demo.dto.UserDTO", "api:GET:/api/users/*", "frontend/pages/ProfilePage.tsx"]
-    ai_reasoning = GeminiService.get_ai_reasoning(change, primary_path)
+    # Derive real primary path from impacted BFS records
+    primary_path = [primary_change.get("file")]
+    if impacted:
+        # Sort by depth and collect actual labels
+        sorted_impacts = sorted(impacted.values(), key=lambda x: x.get("depth", 0))
+        for imp in sorted_impacts[:3]:
+            primary_path.append(imp.get("label", imp.get("id")))
+            
+    ai_reasoning = GeminiService.get_ai_reasoning(primary_change, primary_path)
     
     # 10. Generate PR Comment (Official Bonus)
+    path_formatted = " → ".join([f"`{p}`" for p in primary_path])
     pr_comment = f"""⚡ **ImpactX Change Analysis**
-
+ 
 Risk: 🔴 **{risk['level']}** — {risk['score']}/100
 Confidence: **{risk['confidence']}%**
-
+ 
 ### Blast Radius
 - {len(files_affected)} files
-- {len(services_affected) + 1} services
+- {len(services_affected)} services
 - {len(apis_affected)} API contracts
 - {len(tests)} relevant tests
 - {len(teams)} teams
 - {len(ci_workflows)} CI workflows
-
+ 
 ### Critical Path
-`{changed_node}` → `GET /api/users/*` → `ProfilePage.tsx`
-
-*Potential API contract incompatibility detected.*
-
-### Must Run Tests
-{chr(10).join([f"✓ {t['name']} - *{t['reason']}*" for t in tests if t['category'] == 'MUST RUN'])}
-
+{path_formatted}
+ 
+*Potential code change blast radius trace complete.*
+ 
+### Recommended Tests
+{chr(10).join([f"✓ {t['name']} - *{t['reason']}*" for t in tests]) if tests else "No tests recommended."}
+ 
 ### Affected Teams
-{chr(10).join([f"- **{t['name']}**: {t['reason']}" for t in teams])}
-
+{chr(10).join([f"- **{t['name']}**: {t['reason']}" for t in teams]) if teams else "No teams affected."}
+ 
 ### Affected CI Workflows
-{chr(10).join([f"- `{w['name']}`: {w['reason']}" for w in ci_workflows])}
-"""
-
-    # React Flow specific formats
+{chr(10).join([f"- `{w['name']}`: {w['reason']}" for w in ci_workflows]) if ci_workflows else "No CI workflows af    # React Flow specific formats
     nodes = []
     edges = []
     
+    # Extract changed node IDs to verify styles
+    changed_nodes_set = set()
+    for change in changes:
+        for node in nx_graph.nodes:
+            if change.get("symbol") in node or change.get("file") in node:
+                changed_nodes_set.add(node)
+                
     for node, data in nx_graph.nodes(data=True):
         # Set styling/status flags if impacted
         status = "normal"
-        if node == changed_node:
+        if node in changed_nodes_set:
             status = "changed"
         elif node in impacted:
             status = "impacted"
@@ -374,17 +406,24 @@ Confidence: **{risk['confidence']}%**
             "source": u,
             "target": v,
             "label": data.get("relationship", ""),
-            "highlighted": u in impacted or v in impacted or u == changed_node
+            "highlighted": u in impacted or v in impacted or u in changed_nodes_set
         })
 
+    # Count real unique modules by extracting directories
+    unique_modules = set()
+    for f in scanned.get("files", []):
+        parts = f.split("/")
+        if len(parts) > 1:
+            unique_modules.add(parts[0])
+
     return {
-        "change": change,
+        "change": primary_change,
         "risk": risk,
         "summary": {
             "files": len(files_affected),
-            "modules": 4,
-            "services": len(services_affected) if services_affected else 3,
-            "apis": len(apis_affected) if apis_affected else 2,
+            "modules": len(unique_modules) if unique_modules else 1,
+            "services": len(services_affected),
+            "apis": len(apis_affected),
             "tests": len(tests),
             "teams": len(teams),
             "ciWorkflows": len(ci_workflows)

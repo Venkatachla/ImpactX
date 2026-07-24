@@ -6,12 +6,7 @@ class TestRecommender:
         Scores relevance based on depth and direct/transitive relationships.
         """
         recommended = []
-        # Fallback list of demo tests if scanned tests is empty
-        test_pool = scanned_tests if scanned_tests else [
-            "tests/UserControllerTest.java",
-            "tests/UserServiceTest.java",
-            "tests/AuthIntegrationTest.java"
-        ]
+        test_pool = scanned_tests if scanned_tests else []
 
         # Score matching
         for test in test_pool:

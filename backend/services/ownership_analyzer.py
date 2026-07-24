@@ -72,20 +72,8 @@ class OwnershipAnalyzer:
         for team, info in affected_teams.items():
             info["reasons"] = list(set(info["reasons"]))
             
-        # Fallback default display structure
         if not affected_teams:
-            return [
-                {
-                    "name": "Identity Team",
-                    "components": 5,
-                    "reason": "Owns UserDTO and UserController."
-                },
-                {
-                    "name": "Frontend Team",
-                    "components": 2,
-                    "reason": "Owns frontend consumers of affected API."
-                }
-            ]
+            return []
 
         return [
             {
