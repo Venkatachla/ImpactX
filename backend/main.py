@@ -24,6 +24,10 @@ from services.ci_analyzer import CiAnalyzer
 from services.risk import RiskEngine
 from services.gemini import GeminiService
 
+# Print Config statement at startup
+gemini_configured = bool(os.environ.get("GEMINI_API_KEY"))
+print(f"[Config] Gemini configured: {gemini_configured}")
+
 app = FastAPI(title="ImpactX API Server")
 
 # Configure CORS
@@ -449,7 +453,7 @@ Confidence: **{risk['confidence']}%**
  
 {chr(10).join([f"- `{w['name']}`: {w['reason']}" for w in ci_workflows]) if ci_workflows else "No CI workflows affected."}
 """
-    # React Flow specific formats
+    # React Flow specific formats for Blast Radius Graph
     nodes = []
     edges = []
     
@@ -461,31 +465,27 @@ Confidence: **{risk['confidence']}%**
                 changed_nodes_set.add(node)
                 
     for node, data in nx_graph.nodes(data=True):
-        # Set styling/status flags if impacted
-        status = "normal"
-        if node in changed_nodes_set:
-            status = "changed"
-        elif node in impacted:
-            status = "impacted"
-            
-        nodes.append({
-            "id": node,
-            "type": data.get("type", "FILE"),
-            "status": status,
-            "data": {
-                "label": data.get("label", node),
-                "path": data.get("path", ""),
-                "impact": impacted[node] if node in impacted else None
-            }
-        })
+        if node in changed_nodes_set or node in impacted:
+            status = "changed" if node in changed_nodes_set else "impacted"
+            nodes.append({
+                "id": node,
+                "type": data.get("type", "FILE"),
+                "status": status,
+                "data": {
+                    "label": data.get("label", node),
+                    "path": data.get("path", ""),
+                    "impact": impacted[node] if node in impacted else None
+                }
+            })
         
     for u, v, data in nx_graph.edges(data=True):
-        edges.append({
-            "source": u,
-            "target": v,
-            "label": data.get("relationship", ""),
-            "highlighted": u in impacted or v in impacted or u in changed_nodes_set
-        })
+        if (u in changed_nodes_set or u in impacted) and (v in changed_nodes_set or v in impacted):
+            edges.append({
+                "source": u,
+                "target": v,
+                "label": data.get("relationship", ""),
+                "highlighted": True
+            })
 
     # Count real unique modules by extracting directories
     unique_modules = set()

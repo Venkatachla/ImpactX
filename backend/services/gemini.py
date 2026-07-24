@@ -47,6 +47,7 @@ class GeminiService:
             - additional_risks: A list of other possible concerns.
             """
             
+            print("[GeminiService] Sending grounded remediation request")
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=prompt,
@@ -56,6 +57,7 @@ class GeminiService:
             )
             
             if response.text:
+                print("[GeminiService] Remediation generated successfully")
                 result = json.loads(response.text)
                 
                 # Grounding Validation: Ensure any referenced files exist in context

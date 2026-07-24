@@ -104,7 +104,9 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                         </div>
                         <div>
                             <h3 className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{data.risk.level} Risk</h3>
-                            <p className="text-xs text-gray-700 dark:text-gray-300 max-w-[200px] leading-tight">High-confidence API contract change.</p>
+                            <p className="text-xs text-gray-700 dark:text-gray-300 max-w-[200px] leading-tight">
+                                {data.summary.apis > 0 ? "High-confidence API contract change." : "General source-code modification detected."}
+                            </p>
                         </div>
                     </div>
                     
@@ -289,20 +291,24 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                     <div className="space-y-3">
                                         <h5 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Dependency Path</h5>
                                         <div className="bg-gray-50 dark:bg-[#0D1117] p-3 rounded-lg border border-gray-200 dark:border-[#30363D] text-sm font-mono text-gray-700 dark:text-gray-300 space-y-2">
-                                            <div className="font-bold text-red-600 dark:text-red-400">{data.change.symbol} &rarr; {data.change.newValue}</div>
-                                            {data.impacts.slice(0, 3).map((imp: any, i: number) => (
-                                                <React.Fragment key={i}>
-                                                    <div className="text-gray-400 pl-2">&darr;</div>
-                                                    <div className="pl-4">{imp.name} ({imp.type})</div>
-                                                </React.Fragment>
-                                            ))}
+                                            <div className="font-bold text-red-600 dark:text-red-400">{data.change.symbol} &rarr; {data.change.newValue || 'modified'}</div>
+                                            {data.impacts.length > 0 ? (
+                                                data.impacts.slice(0, 3).map((imp: any, i: number) => (
+                                                    <React.Fragment key={i}>
+                                                        <div className="text-gray-400 pl-2">&darr;</div>
+                                                        <div className="pl-4">{imp.name} ({imp.type})</div>
+                                                    </React.Fragment>
+                                                ))
+                                            ) : (
+                                                <div className="text-gray-500 dark:text-gray-400 text-xs italic">No downstream dependency path detected.</div>
+                                            )}
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <h5 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Why Affected?</h5>
                                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            {data.aiAnalysis.failureExplanation}
+                                            {data.aiAnalysis?.potential_issue || "AI remediation unavailable."}
                                         </p>
                                     </div>
                                 </div>
