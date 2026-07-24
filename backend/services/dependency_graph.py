@@ -1,4 +1,5 @@
 import os
+import re
 import networkx as nx
 
 class DependencyGraph:
@@ -103,7 +104,56 @@ class DependencyGraph:
                     for other_file in scanned_data.get("files", []):
                         if src_path.replace("./", "").replace("../", "") in other_file:
                             self.graph.add_edge(file_rel, other_file, relationship="IMPORTS")
-
+        # ---- Enhanced cross‑file Java dependencies (IMPORTS, USES, INSTANTIATES) ----
+        # Map full class names -> node IDs
+        all_class_ids = {
+            cls['fullName']: f"class:{cls['fullName']}"
+            for ents in parsed_data.values()
+            for cls in ents.get("classes", [])
+        }
+        # Simple name -> full name map for heuristic matching
+        simple_name_to_full = {
+            cls['name']: cls['fullName']
+            for ents in parsed_data.values()
+            for cls in ents.get("classes", [])
+        }
+        for file_rel, entities in parsed_data.items():
+            if entities.get("type") != "JAVA":
+                continue
+            # IMPORT edges
+            for imp in entities.get("imports", []):
+                if imp in all_class_ids:
+                    if entities.get("classes"):
+                        src_cls = f"class:{entities['classes'][0]['fullName']}"
+                        self.graph.add_edge(src_cls, all_class_ids[imp], relationship="IMPORTS")
+                else:
+                    import_node = f"import:{imp}"
+                    self.graph.add_node(import_node, type="IMPORT", label=imp)
+                    if entities.get("classes"):
+                        src_cls = f"class:{entities['classes'][0]['fullName']}"
+                        self.graph.add_edge(src_cls, import_node, relationship="IMPORTS")
+            # USAGE / INSTANTIATION detection
+            abs_path = os.path.join(repo_path, file_rel)
+            try:
+                with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+            except Exception:
+                content = ""
+            for simple_name, full_name in simple_name_to_full.items():
+                if any(c["name"] == simple_name for c in entities.get("classes", [])):
+                    continue
+                if re.search(rf"\\b{re.escape(simple_name)}\\b", content):
+                    for cls in entities.get("classes", []):
+                        src_id = f"class:{cls['fullName']}"
+                        tgt_id = all_class_ids.get(full_name)
+                        if tgt_id:
+                            self.graph.add_edge(src_id, tgt_id, relationship="USES")
+                    if re.search(rf"new\\s+{re.escape(simple_name)}\\s*\\(", content):
+                        for cls in entities.get("classes", []):
+                            src_id = f"class:{cls['fullName']}"
+                            tgt_id = all_class_ids.get(full_name)
+                            if tgt_id:
+                                self.graph.add_edge(src_id, tgt_id, relationship="INSTANTIATES")
         # 5. Add tests relationships
         for test_file in scanned_data.get("tests", []):
             self.graph.add_node(test_file, type="TEST", label=os.path.basename(test_file))
@@ -115,5 +165,4 @@ class DependencyGraph:
                 elif attr.get("type") == "FILE" and target_class_name in attr.get("label", ""):
                     self.graph.add_edge(test_file, node, relationship="TESTS")
 
-    def get_networkx_graph(self):
-        return self.graph
+

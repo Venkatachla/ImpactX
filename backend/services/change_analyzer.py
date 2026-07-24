@@ -49,15 +49,27 @@ class ChangeAnalyzer:
                 
                 if path_clean.endswith((".java", ".ts", ".tsx", ".js", ".py", ".json", ".properties", ".xml", ".yml", ".yaml")):
                     diff_text = diff.diff.decode('utf-8', errors='ignore') if isinstance(diff.diff, bytes) else str(diff.diff)
-                    
-                    rename_match = re.search(r'-(\s*\w+)\s*;\s*\n\+(\s*\w+)\s*;', diff_text)
-                    if rename_match:
+                    # Detect field rename and type changes using regex patterns
+                    rename_pattern = re.compile(r'^-\s*.*\s+(\w+);.*\n\+\s*.*\s+(\w+);', re.MULTILINE)
+                    type_change_pattern = re.compile(r'^-\s*([\w<>\[\]\s,]+)\s+(\w+);.*\n\+\s*([\w<>\[\]\s,]+)\s+(\w+);', re.MULTILINE)
+                    rename_match = rename_pattern.search(diff_text)
+                    type_change_match = type_change_pattern.search(diff_text)
+                    if rename_match and rename_match.group(1) != rename_match.group(2):
                         changes.append({
                             "file": path_clean,
-                            "symbol": rename_match.group(1).strip(),
+                            "symbol": os.path.basename(path_clean),
                             "changeType": "FIELD_RENAMED",
                             "oldValue": rename_match.group(1).strip(),
                             "newValue": rename_match.group(2).strip(),
+                            "lines": [1, 10]
+                        })
+                    elif type_change_match and type_change_match.group(1).strip() != type_change_match.group(3).strip():
+                        changes.append({
+                            "file": path_clean,
+                            "symbol": os.path.basename(path_clean),
+                            "changeType": "FIELD_TYPE_CHANGED",
+                            "oldValue": type_change_match.group(1).strip(),
+                            "newValue": type_change_match.group(3).strip(),
                             "lines": [1, 10]
                         })
                     else:
