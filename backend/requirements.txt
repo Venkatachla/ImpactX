@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+networkx
+gitpython
+google-genai
+pyyaml
