@@ -41,13 +41,20 @@ export default function App() {
         setCurrentView('progress');
 
         // Phase 1 - Baseline Map scan
+        const payload = { repoPath: path, appMode: mode };
+        console.log("Repository analyze request:", payload);
+        
         fetch('http://localhost:8000/api/repositories/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repoPath: path, appMode: mode })
+            body: JSON.stringify(payload)
         })
-        .then(res => {
-            if (!res.ok) throw new Error('Repository parsing failed.');
+        .then(async res => {
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                const detailMsg = errJson.detail || errJson.error || 'Repository parsing failed.';
+                throw new Error(detailMsg);
+            }
             return res.json();
         })
         .then(data => {
@@ -70,8 +77,12 @@ export default function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ repoPath: repoPath, diffMode, appMode })
         })
-        .then(res => {
-            if (!res.ok) throw new Error('Blast radius analysis failed.');
+        .then(async res => {
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                const detailMsg = errJson.detail || errJson.error || 'Blast radius analysis failed.';
+                throw new Error(detailMsg);
+            }
             return res.json();
         })
         .then(data => {

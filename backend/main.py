@@ -29,7 +29,7 @@ app = FastAPI(title="ImpactX API Server")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +46,24 @@ class AnalyzeImpactRequest(BaseModel):
 
 # Global state mapping representing repository baseline snapshots
 BASELINE_SNAPSHOTS = {}
+
+import traceback
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+def global_exception_handler(request, exc):
+    """
+    Catch-all fallback global handler preventing unhandled HTTP 500 error blockages
+    """
+    error_trace = traceback.format_exc()
+    print(f"CRITICAL BACKEND ERROR:\n{error_trace}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": str(exc),
+            "details": error_trace
+        }
+    )
 
 @app.get("/health")
 def health_check():
@@ -77,32 +95,70 @@ def promote_baseline(req: AnalyzeRepoRequest):
 def analyze_repository(req: AnalyzeRepoRequest):
     # Resolve relative/absolute path or clone remote git url
     path = req.repoPath
+    print(f"[API] Received analyze_repository request. path={path}, appMode={req.appMode}")
+    
     if path.startswith("http://") or path.startswith("https://"):
-        import tempfile
         import shutil
         from git import Repo
         
-        # Create a unique temporary directory name in workspace
         safe_name = re.sub(r'[^a-zA-Z0-9]', '_', path)
-        temp_dir = os.path.join(os.path.dirname(__file__), "..", "cloned_repos", safe_name)
-        if os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception:
-                pass
+        temp_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cloned_repos", safe_name))
+        git_dir = os.path.join(temp_dir, ".git")
         
-        os.makedirs(temp_dir, exist_ok=True)
-        try:
-            Repo.clone_from(path, temp_dir)
+        print(f"[API] Cloned repo destination resolved to: {temp_dir}")
+        
+        is_valid_repo = False
+        if os.path.exists(git_dir):
+            try:
+                # Try opening git repo to verify validity
+                repo = Repo(temp_dir)
+                # Verify remote URL matches
+                if len(repo.remotes) > 0 and repo.remotes.origin.url in {path, path + ".git", path.rstrip("/")}:
+                    print(f"[API] Valid repository exists. Reusing clone path: {temp_dir}")
+                    is_valid_repo = True
+                repo.close()
+            except Exception as e:
+                print(f"[API] Existing directory invalid. Error: {str(e)}")
+                
+        if not is_valid_repo:
+            print(f"[API] Directory invalid/missing. Initiating cleanup/creation...")
+            if os.path.exists(temp_dir):
+                # Try cleaning up securely or fallback to a unique subdirectory key
+                def handle_remove_readonly(func, path, exc):
+                    import stat
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+                try:
+                    shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
+                except Exception as e:
+                    # Fallback to unique folder name suffix to avoid permissions failure blocking
+                    import time
+                    unique_suffix = f"_{int(time.time())}"
+                    temp_dir = temp_dir + unique_suffix
+                    print(f"[API] Permission error, fallback unique folder path: {temp_dir}")
+            
+            os.makedirs(temp_dir, exist_ok=True)
+            try:
+                print(f"[API] Launching git clone of: {path}")
+                # Fetch full history for commit checks later
+                Repo.clone_from(path, temp_dir)
+                path = temp_dir
+                print(f"[API] Clone completed successfully. path={path}")
+            except Exception as e:
+                err_msg = str(e)
+                print(f"[API] Error cloning repository: {err_msg}")
+                if "Authentication failed" in err_msg or "could not read Username" in err_msg:
+                    raise HTTPException(status_code=400, detail="Repository requires authentication or is inaccessible.")
+                raise HTTPException(status_code=400, detail=f"Failed to clone remote repository: {err_msg}")
+        else:
             path = temp_dir
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to clone remote repository: {str(e)}")
             
     if not os.path.exists(path):
-        # Fallback to local demo-repo
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo-repo"))
+        raise HTTPException(status_code=400, detail=f"Specified local repository path does not exist on disk: {path}")
         
+    print(f"[API] Starting scanner on resolved path: {path}")
     scanned = scan_repository(path)
+    print(f"[API] Scanner completed. Found {len(scanned.get('files', []))} files, {len(scanned.get('tests', []))} tests.")
     
     # Parse each file
     parsed_data = {}
@@ -115,6 +171,7 @@ def analyze_repository(req: AnalyzeRepoRequest):
     dep_graph = DependencyGraph()
     dep_graph.build_graph(path, scanned, parsed_data)
     nx_graph = dep_graph.get_networkx_graph()
+    print(f"[API] Graph built. Nodes: {nx_graph.number_of_nodes()}, Edges: {nx_graph.number_of_edges()}")
     
     # Cache baseline representation
     BASELINE_SNAPSHOTS[path] = dep_graph
