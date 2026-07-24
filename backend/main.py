@@ -370,8 +370,9 @@ Confidence: **{risk['confidence']}%**
 ### Affected Teams
 {chr(10).join([f"- **{t['name']}**: {t['reason']}" for t in teams]) if teams else "No teams affected."}
  
-### Affected CI Workflows
-{chr(10).join([f"- `{w['name']}`: {w['reason']}" for w in ci_workflows]) if ci_workflows else "No CI workflows af    # React Flow specific formats
+{chr(10).join([f"- `{w['name']}`: {w['reason']}" for w in ci_workflows]) if ci_workflows else "No CI workflows affected."}
+"""
+    # React Flow specific formats
     nodes = []
     edges = []
     
