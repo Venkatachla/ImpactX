@@ -123,7 +123,6 @@ def analyze_repository(req: AnalyzeRepoRequest):
         if not is_valid_repo:
             print(f"[API] Directory invalid/missing. Initiating cleanup/creation...")
             if os.path.exists(temp_dir):
-                # Try cleaning up securely or fallback to a unique subdirectory key
                 def handle_remove_readonly(func, path, exc):
                     import stat
                     os.chmod(path, stat.S_IWRITE)
@@ -131,7 +130,6 @@ def analyze_repository(req: AnalyzeRepoRequest):
                 try:
                     shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
                 except Exception as e:
-                    # Fallback to unique folder name suffix to avoid permissions failure blocking
                     import time
                     unique_suffix = f"_{int(time.time())}"
                     temp_dir = temp_dir + unique_suffix
@@ -140,7 +138,6 @@ def analyze_repository(req: AnalyzeRepoRequest):
             os.makedirs(temp_dir, exist_ok=True)
             try:
                 print(f"[API] Launching git clone of: {path}")
-                # Fetch full history for commit checks later
                 Repo.clone_from(path, temp_dir)
                 path = temp_dir
                 print(f"[API] Clone completed successfully. path={path}")
@@ -152,6 +149,47 @@ def analyze_repository(req: AnalyzeRepoRequest):
                 raise HTTPException(status_code=400, detail=f"Failed to clone remote repository: {err_msg}")
         else:
             path = temp_dir
+            # Sync the existing cached clone with remote origin safely
+            try:
+                repo = Repo(temp_dir)
+                before_head = repo.git.rev_parse("HEAD")
+                print(f"[API] Sync: Local HEAD before sync = {before_head}")
+                
+                print(f"[API] Sync: Fetching origin remote changes...")
+                repo.git.fetch("origin")
+                
+                # Resolve remote HEAD/default branch
+                # In most cases remote references origin/HEAD exists, or fallback origin/main or origin/master
+                default_branch = "main"
+                try:
+                    # Parse default branch name from origin references list
+                    for ref in repo.references:
+                        if ref.name == "origin/HEAD":
+                            default_branch = ref.ref.name.replace("origin/", "")
+                            break
+                except Exception:
+                    pass
+                
+                # Force checkout and hard reset to the corresponding origin branch to reflect the latest remote commit
+                print(f"[API] Sync: Checkout & Reset Hard to origin/{default_branch}")
+                repo.git.checkout(default_branch)
+                repo.git.reset("--hard", f"origin/{default_branch}")
+                
+                after_head = repo.git.rev_parse("HEAD")
+                parent_head = "N/A"
+                try:
+                    parent_head = repo.git.rev_parse("HEAD~1")
+                except Exception:
+                    pass
+                total_commits = len(list(repo.iter_commits()))
+                
+                print(f"[API] Sync: Local HEAD after sync = {after_head}")
+                print(f"[API] Sync: HEAD~1 = {parent_head}")
+                print(f"[API] Sync: Total commit count = {total_commits}")
+                repo.close()
+            except Exception as e:
+                print(f"[API] Error syncing remote repository: {str(e)}")
+                # Continue with whatever is currently checked out if fetch sync fails temporarily
             
     if not os.path.exists(path):
         raise HTTPException(status_code=400, detail=f"Specified local repository path does not exist on disk: {path}")
