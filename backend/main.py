@@ -36,10 +36,12 @@ app.add_middleware(
 
 class AnalyzeRepoRequest(BaseModel):
     repoPath: str
+    appMode: Optional[str] = "real"
 
 class AnalyzeImpactRequest(BaseModel):
     repoPath: str
     diffMode: Optional[str] = "demo"
+    appMode: Optional[str] = "real"
 
 # Global state mapping representing repository baseline snapshots
 BASELINE_SNAPSHOTS = {}
@@ -175,7 +177,11 @@ def analyze_impact(req: AnalyzeImpactRequest):
         BASELINE_SNAPSHOTS[path] = dep_graph
     
     # 3. Detect Change
-    change = ChangeAnalyzer.detect_change(path, req.diffMode)
+    diff_mode_to_use = req.diffMode
+    if req.appMode == "real" and diff_mode_to_use == "demo":
+        diff_mode_to_use = "git"
+        
+    change = ChangeAnalyzer.detect_change(path, diff_mode_to_use)
     if not change:
         return {
             "change": None,

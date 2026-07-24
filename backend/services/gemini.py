@@ -46,9 +46,16 @@ class GeminiService:
 
     @staticmethod
     def get_fallback_reasoning(change: dict, path: list):
+        # Generate explanations dynamically from the actual change context
+        file_name = change.get("file", "unknown file")
+        symbol = change.get("symbol", "unknown symbol")
+        change_type = change.get("changeType", "GENERIC_CHANGE")
+        
+        path_str = " -> ".join(path) if path else "N/A"
+        
         return {
-            "failureExplanation": "The frontend ProfilePage.tsx expects 'user.email' from the GET /api/users/{id} API. Because the DTO field was renamed to 'primaryEmail', the API response will omit 'email', causing 'user.email' to evaluate to undefined and crash the rendering script.",
-            "remediation": "Update the frontend API consumer in ProfilePage.tsx to reference user.primaryEmail, or implement a backend serialization alias to maintain backwards compatibility.",
-            "migrationAdvice": "Add a serialization alias @JsonProperty(\"email\") on UserDTO.primaryEmail during a 30-day migration period, allowing legacy clients to transition safely.",
-            "suggestedTest": "Add a compatibility test verifying that requesting /api/users/{id} returns both 'email' and 'primaryEmail' properties in the payload."
+            "failureExplanation": f"The change of type {change_type} on symbol '{symbol}' inside file '{file_name}' propagates down the dependency path: {path_str}. Downstream consumers may experience type mismatches or unhandled exceptions.",
+            "remediation": f"Verify all references to '{symbol}' in dependent modules are updated to match the new declaration.",
+            "migrationAdvice": "Use deprecated annotations or serializable compatibility layers during transition periods.",
+            "suggestedTest": f"Add regression/integration tests verifying that downstream consumers of '{symbol}' behave correctly."
         }

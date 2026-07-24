@@ -191,47 +191,30 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                     <PlayCircle size={16} /> Replay Blast Radius
                                 </button>
 
-                                {/* Mock Graph */}
-                                <div className={`relative w-full h-full flex flex-col items-center justify-center gap-12 ${isReplaying ? 'animate-pulse' : ''}`}>
-                                    <div className="text-center z-10 relative">
-                                        <div className="bg-white dark:bg-[#161B22] border-2 border-red-500 rounded-xl px-4 py-2 shadow-lg shadow-red-500/20">
-                                            <span className="font-bold text-gray-900 dark:text-white">UserDTO</span>
-                                            <span className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full animate-ping"></span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex gap-16 z-10 relative">
-                                        <div className="bg-white dark:bg-[#161B22] border border-red-500 rounded-xl px-4 py-2 text-center opacity-90">
-                                            <span className="font-bold text-gray-900 dark:text-white">UserService</span>
-                                        </div>
-                                        <div className="bg-white dark:bg-[#161B22] border border-red-500 rounded-xl px-4 py-2 text-center relative shadow-lg shadow-red-500/20">
-                                            <span className="font-bold text-gray-900 dark:text-white">UserController</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-16 z-10 relative">
-                                        <div className="bg-white dark:bg-[#161B22] border border-orange-500 rounded-xl px-4 py-2 text-center opacity-80">
-                                            <span className="font-bold text-gray-900 dark:text-white">AuthService</span>
-                                        </div>
-                                        <div className="bg-white dark:bg-[#161B22] border border-red-500 rounded-xl px-4 py-2 text-center relative shadow-lg shadow-red-500/20">
-                                            <span className="font-mono text-sm font-bold text-gray-900 dark:text-white">GET /api/users/*</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-8 z-10 relative">
-                                        <div className="bg-white dark:bg-[#161B22] border-2 border-red-500 rounded-xl px-4 py-2 text-center shadow-[0_0_20px_rgba(239,68,68,0.3)] transform scale-110">
-                                            <span className="font-bold text-gray-900 dark:text-white">ProfilePage.tsx</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Lines */}
-                                    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-50">
-                                        <line x1="50%" y1="20%" x2="40%" y2="40%" stroke="#ef4444" strokeWidth="2" strokeDasharray="4" />
-                                        <line x1="50%" y1="20%" x2="60%" y2="40%" stroke="#ef4444" strokeWidth="2" strokeDasharray="4" />
-                                        <line x1="40%" y1="45%" x2="40%" y2="65%" stroke="#f97316" strokeWidth="2" strokeDasharray="4" />
-                                        <line x1="60%" y1="45%" x2="60%" y2="65%" stroke="#ef4444" strokeWidth="2" strokeDasharray="4" />
-                                        <line x1="60%" y1="70%" x2="50%" y2="90%" stroke="#ef4444" strokeWidth="2" strokeDasharray="4" />
-                                    </svg>
+                                {/* Dynamic React Flow Node representation mapping */}
+                                <div className="absolute inset-0 p-6 overflow-auto flex flex-wrap content-start gap-4">
+                                    {data.graph?.nodes?.slice(0, 16).map((node: any) => {
+                                        const isChanged = node.status === 'changed';
+                                        const isImpacted = node.status === 'impacted';
+                                        return (
+                                            <div 
+                                                key={node.id} 
+                                                className={`px-4 py-2.5 rounded-lg border-2 text-xs font-mono transition-shadow shadow-sm ${
+                                                    isChanged 
+                                                        ? 'border-red-500 bg-red-500/10 text-red-500 font-bold' 
+                                                        : isImpacted 
+                                                            ? 'border-orange-500 bg-orange-500/10 text-orange-500' 
+                                                            : 'border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] text-gray-700 dark:text-gray-300'
+                                                }`}
+                                            >
+                                                <div className="font-bold mb-0.5">{node.type}</div>
+                                                <div className="truncate max-w-[200px]">{node.data?.label || node.id}</div>
+                                            </div>
+                                        );
+                                    })}
+                                    {(!data.graph?.nodes || data.graph.nodes.length === 0) && (
+                                        <div className="text-gray-500 dark:text-gray-400 text-sm m-auto">No graph nodes parsed.</div>
+                                    )}
                                 </div>
                             </div>
 
@@ -243,22 +226,22 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                 <div className="p-4 flex-1 overflow-auto space-y-6">
                                     <div>
                                         <h4 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-2">
-                                            <FileCode size={20} className="text-red-500" /> ProfilePage.tsx
+                                            <FileCode size={20} className="text-red-500" /> {data.change.file}
                                         </h4>
-                                        <Badge variant="critical">Critical Impact</Badge>
+                                        <Badge variant="critical">{data.risk.level} Impact</Badge>
                                         <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Confidence: {data.risk.confidence}%</div>
                                     </div>
 
                                     <div className="space-y-3">
                                         <h5 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Dependency Path</h5>
                                         <div className="bg-gray-50 dark:bg-[#0D1117] p-3 rounded-lg border border-gray-200 dark:border-[#30363D] text-sm font-mono text-gray-700 dark:text-gray-300 space-y-2">
-                                            <div>UserDTO.email</div>
-                                            <div className="pl-2 text-gray-400">&darr;</div>
-                                            <div className="pl-4">UserController</div>
-                                            <div className="pl-6 text-gray-400">&darr;</div>
-                                            <div className="pl-8 text-blue-600 dark:text-blue-400">GET /api/users/*</div>
-                                            <div className="pl-10 text-gray-400">&darr;</div>
-                                            <div className="pl-12 font-bold text-red-600 dark:text-red-400">ProfilePage.tsx</div>
+                                            <div className="font-bold text-red-600 dark:text-red-400">{data.change.symbol} &rarr; {data.change.newValue}</div>
+                                            {data.impacts.slice(0, 3).map((imp: any, i: number) => (
+                                                <React.Fragment key={i}>
+                                                    <div className="text-gray-400 pl-2">&darr;</div>
+                                                    <div className="pl-4">{imp.name} ({imp.type})</div>
+                                                </React.Fragment>
+                                            ))}
                                         </div>
                                     </div>
 
@@ -401,20 +384,16 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                         
                                         <div className="bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D] overflow-hidden text-sm font-mono leading-6">
                                             <div className="flex text-gray-500 dark:text-gray-400 px-4 py-1">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">141</span>
-                                                <span>const UserProfile = ({'{'} user {'}'}) =&gt; {'{'}</span>
+                                                <span className="w-8 text-right pr-4 select-none opacity-50">1</span>
+                                                <span>// Affected File: {data.change.file}</span>
                                             </div>
                                             <div className="flex bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-1 border-l-2 border-red-500">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">142</span>
-                                                <span>- return &lt;div&gt;{'{'}user.email{'}'}&lt;/div&gt;;</span>
+                                                <span className="w-8 text-right pr-4 select-none opacity-50">2</span>
+                                                <span>- {data.change.oldValue || data.change.symbol}</span>
                                             </div>
                                             <div className="flex bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-1 border-l-2 border-green-500">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">142</span>
-                                                <span>+ return &lt;div&gt;{'{'}user.primaryEmail{'}'}&lt;/div&gt;;</span>
-                                            </div>
-                                            <div className="flex text-gray-500 dark:text-gray-400 px-4 py-1 pb-2">
-                                                <span className="w-8 text-right pr-4 select-none opacity-50">143</span>
-                                                <span>{'}'};</span>
+                                                <span className="w-8 text-right pr-4 select-none opacity-50">3</span>
+                                                <span>+ {data.change.newValue}</span>
                                             </div>
                                         </div>
                                     </div>

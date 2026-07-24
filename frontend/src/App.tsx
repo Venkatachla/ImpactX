@@ -15,6 +15,8 @@ export default function App() {
     const [loadingBaseline, setLoadingBaseline] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+    const [appMode, setAppMode] = useState<'real' | 'demo'>('real');
+
     useEffect(() => {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             setIsDarkMode(true);
@@ -29,8 +31,9 @@ export default function App() {
         }
     }, [isDarkMode]);
 
-    const handleImportRepo = (path: string) => {
+    const handleImportRepo = (path: string, mode: 'real' | 'demo' = 'real') => {
         setRepoPath(path);
+        setAppMode(mode);
         setLoadingBaseline(true);
         setErrorMsg('');
         setAnalysisResult(null);
@@ -41,7 +44,7 @@ export default function App() {
         fetch('http://localhost:8000/api/repositories/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repoPath: path })
+            body: JSON.stringify({ repoPath: path, appMode: mode })
         })
         .then(res => {
             if (!res.ok) throw new Error('Repository parsing failed.');
@@ -65,7 +68,7 @@ export default function App() {
         fetch('http://localhost:8000/api/impact/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repoPath: repoPath, diffMode })
+            body: JSON.stringify({ repoPath: repoPath, diffMode, appMode })
         })
         .then(res => {
             if (!res.ok) throw new Error('Blast radius analysis failed.');
@@ -105,13 +108,16 @@ export default function App() {
         switch(currentView) {
             case 'dashboard': return <DashboardView onNavigate={setCurrentView} />;
             case 'import': return <ImportView onNavigate={handleImportRepo} />;
-            case 'select-change': return (
-                <ChangeSelectionView 
-                    onNavigate={handleSelectChange} 
-                    baselineData={baselineData} 
-                    errorMsg={errorMsg}
-                />
-            );
+            case 'select-change': {
+                return (
+                    <ChangeSelectionView 
+                        onNavigate={handleSelectChange} 
+                        baselineData={baselineData} 
+                        errorMsg={errorMsg}
+                        isDemoRepo={appMode === 'demo'}
+                    />
+                );
+            }
             case 'progress': return <ProgressView onNavigate={setCurrentView} />;
             case 'results': return (
                 <ResultView 

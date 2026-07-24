@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Upload, PlayCircle, Rocket, Shield, Activity, GitBranch, Key, Info } from 'lucide-react';
 
-export default function ImportView({ onNavigate }: { onNavigate: (path: string) => void }) {
+export default function ImportView({ onNavigate }: { onNavigate: (path: string, mode: 'real' | 'demo') => void }) {
     const [path, setPath] = useState('');
 
     return (
@@ -91,7 +91,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (path: string) 
                             Agentic analyzers will scan commit history and dependency graphs upon connection.
                         </p>
                         <button 
-                            onClick={() => onNavigate(path || 'demo-repo')}
+                            onClick={() => onNavigate(path || '.', 'real')}
                             className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
                         >
                             Connect Repository
@@ -129,7 +129,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (path: string) 
                             Instant access to a microservices architecture sample. No configuration required.
                         </p>
                         <button 
-                            onClick={() => onNavigate('demo-repo')}
+                            onClick={() => onNavigate('demo-repo', 'demo')}
                             className="w-full bg-gray-50 dark:bg-[#21262D] hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-gray-200 dark:border-[#30363D] hover:border-blue-500 text-gray-900 dark:text-white py-3 rounded font-bold flex items-center justify-center gap-2 transition-colors"
                         >
                             Explore with Demo
