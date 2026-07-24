@@ -10,6 +10,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 import sys
 import os
+import re
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from services.repository_scanner import scan_repository
@@ -234,7 +235,8 @@ def analyze_impact(req: AnalyzeImpactRequest):
     
     for node_id, data in impacted.items():
         n_type = data["type"]
-        path_str = data["path"] or node_id
+        raw_path = data["path"] or node_id
+        path_str = " -> ".join(raw_path) if isinstance(raw_path, list) else str(raw_path)
         files_affected.add(path_str)
         
         if "Service" in node_id:

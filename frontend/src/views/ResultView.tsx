@@ -42,13 +42,14 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
     if (!data.change) {
         return (
             <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-[#0D1117] p-8">
-                <div className="text-center space-y-6 max-w-md">
+                <div className="text-center space-y-6 max-w-lg">
                     <div className="w-16 h-16 bg-gray-100 dark:bg-[#161B22] rounded-full flex items-center justify-center text-gray-500 mx-auto">
                         <Info size={32} />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">No Changes Detected</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">No Local Changes Detected</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                        There are no local working tree changes or diff comparisons detected in this repository baseline snapshot.
+                        There are no active local working tree modifications detected on disk inside the analyzed directory. 
+                        Note: Local changes must be modified directly in the backend clone folder itself. If this is a freshly cloned repository, try running <strong>Analyze Latest Commit</strong> instead to compare HEAD~1.
                     </p>
                     <button 
                         onClick={() => onNavigate('select-change')}
