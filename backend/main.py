@@ -41,9 +41,34 @@ class AnalyzeImpactRequest(BaseModel):
     repoPath: str
     diffMode: Optional[str] = "demo"
 
+# Global state mapping representing repository baseline snapshots
+BASELINE_SNAPSHOTS = {}
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "ImpactX Analysis Engine Active"}
+
+@app.post("/api/repositories/promote")
+def promote_baseline(req: AnalyzeRepoRequest):
+    """
+    Promotes the latest analyzed changes to become the new baseline snapshot.
+    """
+    path = req.repoPath
+    if not os.path.exists(path):
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo-repo"))
+        
+    scanned = scan_repository(path)
+    parsed_data = {}
+    for file_rel in scanned["files"]:
+        entities = StructuralParser.parse_file(path, file_rel)
+        if entities:
+            parsed_data[file_rel] = entities
+            
+    dep_graph = DependencyGraph()
+    dep_graph.build_graph(path, scanned, parsed_data)
+    BASELINE_SNAPSHOTS[path] = dep_graph
+    
+    return {"status": "success", "message": "Current state successfully promoted to new baseline snapshot"}
 
 @app.post("/api/repositories/analyze")
 def analyze_repository(req: AnalyzeRepoRequest):
@@ -66,6 +91,9 @@ def analyze_repository(req: AnalyzeRepoRequest):
     dep_graph = DependencyGraph()
     dep_graph.build_graph(path, scanned, parsed_data)
     nx_graph = dep_graph.get_networkx_graph()
+    
+    # Cache baseline representation
+    BASELINE_SNAPSHOTS[path] = dep_graph
     
     # Format graph nodes and edges for React Flow
     nodes = []
@@ -110,21 +138,59 @@ def analyze_impact(req: AnalyzeImpactRequest):
         if entities:
             parsed_data[file_rel] = entities
             
-    # 2. Build Dependency Graph
-    dep_graph = DependencyGraph()
-    dep_graph.build_graph(path, scanned, parsed_data)
-    nx_graph = dep_graph.get_networkx_graph()
+    # 2. Retrieve Baseline Graph or build V1
+    if path in BASELINE_SNAPSHOTS:
+        baseline_graph_obj = BASELINE_SNAPSHOTS[path]
+        nx_graph = baseline_graph_obj.get_networkx_graph()
+    else:
+        dep_graph = DependencyGraph()
+        dep_graph.build_graph(path, scanned, parsed_data)
+        nx_graph = dep_graph.get_networkx_graph()
+        BASELINE_SNAPSHOTS[path] = dep_graph
     
     # 3. Detect Change
     change = ChangeAnalyzer.detect_change(path, req.diffMode)
-    
+    if not change:
+        return {
+            "change": None,
+            "risk": {"score": 0, "level": "LOW", "confidence": 100, "breakdown": []},
+            "summary": {"files": 0, "modules": 0, "services": 0, "apis": 0, "tests": 0, "teams": 0, "ciWorkflows": 0},
+            "graph": {
+                "nodes": [],
+                "edges": []
+            },
+            "impacts": [],
+            "tests": [],
+            "teams": [],
+            "ci": [],
+            "aiAnalysis": {
+                "failureExplanation": "No local code changes detected.",
+                "remediation": "Modify a source file or check in a commit first.",
+                "migrationAdvice": "N/A",
+                "suggestedTest": "N/A"
+            },
+            "prComment": "⚡ **ImpactX Change Analysis**\n\nNo changes detected."
+        }
+
     # Find changed node in graph
-    # For golden demo scenario, UserDTO.email renamed
-    changed_node = "field:com.example.demo.dto.UserDTO.email"
-    if not nx_graph.has_node(changed_node):
-        # Fallback to file level node
-        changed_node = "backend/dto/UserDTO.java"
-        
+    changed_node = None
+    # Look for field node match
+    field_key = f"field:com.example.demo.dto.UserDTO.{change.get('symbol')}"
+    if nx_graph.has_node(field_key):
+        changed_node = field_key
+    else:
+        # Search class/method/file match
+        for node in nx_graph.nodes:
+            if change.get("symbol") in node or change.get("file") in node:
+                changed_node = node
+                break
+                
+    if not changed_node:
+        # File node fallback
+        changed_node = change.get("file")
+        if not nx_graph.has_node(changed_node):
+            nx_graph.add_node(changed_node, type="FILE", label=os.path.basename(changed_node))
+
     # 4. Blast Radius BFS Analysis
     impacted = ImpactAnalyzer.analyze_impact(nx_graph, changed_node)
     

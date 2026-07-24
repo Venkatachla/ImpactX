@@ -9,9 +9,10 @@ import { THEME_CLASSES } from '../lib/constants';
 interface ResultViewProps {
     onNavigate: (view: string) => void;
     analysisData?: any;
+    onPromote?: () => void;
 }
 
-export default function ResultView({ onNavigate, analysisData }: ResultViewProps) {
+export default function ResultView({ onNavigate, analysisData, onPromote }: ResultViewProps) {
     const [activeTab, setActiveTab] = useState('Overview');
     const [isReplaying, setIsReplaying] = useState(false);
 
@@ -20,71 +21,21 @@ export default function ResultView({ onNavigate, analysisData }: ResultViewProps
         setTimeout(() => setIsReplaying(false), 3000);
     };
 
-    // Fallback static structure matching dynamic shape if analysisData isn't loaded
-    const data = analysisData || {
-        change: {
-            file: "backend/dto/UserDTO.java",
-            symbol: "email",
-            changeType: "FIELD_RENAMED",
-            oldValue: "email",
-            newValue: "primaryEmail",
-            lines: [8, 9]
-        },
-        risk: {
-            score: 87,
-            level: "CRITICAL",
-            confidence: 94,
-            breakdown: [
-                { factor: "DTO schema field rename (FIELD_RENAMED)", score: 23 },
-                { factor: "Public API contract exposure", score: 20 },
-                { factor: "Direct dependents impacted (3 nodes)", score: 15 },
-                { factor: "Transitive blast radius reach (4 nodes)", score: 10 },
-                { factor: "Critical Area (Authentication/Identity component)", score: 10 },
-                { factor: "CI trigger workflow affected", score: 5 },
-                { factor: "Cross-team impact (Identity & Frontend)", score: 5 }
-            ]
-        },
-        summary: {
-            files: 12,
-            modules: 4,
-            services: 3,
-            apis: 2,
-            tests: 6,
-            teams: 2,
-            ciWorkflows: 2
-        },
-        impacts: [
-            { name: "UserService", type: "SERVICE", impact: "DIRECT", reason: "UserService depends directly on UserDTO", path: "backend/service/UserService.java" },
-            { name: "AuthService", type: "SERVICE", impact: "TRANSITIVE", reason: "AuthService references UserService", path: "backend/service/AuthService.java" },
-            { name: "NotificationService", type: "SERVICE", impact: "TRANSITIVE", reason: "NotificationService logs UserDTO field", path: "backend/service/NotificationService.java" },
-            { name: "UserController", type: "CONTROLLER", impact: "DIRECT", reason: "UserController returns UserDTO in REST paths", path: "backend/controller/UserController.java" },
-            { name: "GET /api/users/{id}", type: "API", impact: "DIRECT", reason: "API contract schema includes the changed UserDTO model", path: "GET /api/users/{id}" },
-            { name: "ProfilePage.tsx", type: "FRONTEND", impact: "TRANSITIVE", reason: "Consumes GET /api/users/{id} and accesses user.email", path: "frontend/pages/ProfilePage.tsx" }
-        ],
-        tests: [
-            { name: "UserControllerTest.java", score: 98, category: "MUST RUN", reason: "Directly tests the affected controller layer." },
-            { name: "UserServiceTest.java", score: 91, category: "MUST RUN", reason: "Tests direct dependency of the changed DTO/Service." },
-            { name: "AuthIntegrationTest.java", score: 82, category: "RECOMMENDED", reason: "Exercises the affected user authentication API flow." }
-        ],
-        teams: [
-            { name: "Identity Team", components: 5, reason: "Owns UserDTO, UserController, UserService, and AuthService." },
-            { name: "Frontend Team", components: 2, reason: "Owns frontend consumers of the affected API." }
-        ],
-        ci: [
-            { name: "backend-ci.yml", affected: "YES", reason: "Backend DTO/API components are in blast radius.", jobs: ["build", "unit-tests", "integration-tests"] },
-            { name: "frontend-ci.yml", affected: "YES", reason: "Frontend API consumer is affected.", jobs: ["build", "contract-tests"] }
-        ],
-        aiAnalysis: {
-            failureExplanation: "The frontend ProfilePage.tsx expects 'user.email' from the GET /api/users/{id} API. Because the DTO field was renamed to 'primaryEmail', the API response will omit 'email', causing 'user.email' to evaluate to undefined and crash the rendering script.",
-            remediation: "Update the frontend API consumer in ProfilePage.tsx to reference user.primaryEmail, or implement a backend serialization alias to maintain backwards compatibility.",
-            migrationAdvice: "Add a serialization alias @JsonProperty(\"email\") on UserDTO.primaryEmail during a 30-day migration period, allowing legacy clients to transition safely.",
-            suggestedTest: "Add a compatibility test verifying that requesting /api/users/{id} returns both 'email' and 'primaryEmail' properties in the payload."
-        },
-        prComment: "⚡ **ImpactX Change Analysis**\n\nRisk: 🔴 **CRITICAL** — 87/100"
-    };
+    if (!analysisData) {
+        return (
+            <div className="flex items-center justify-center h-full bg-white dark:bg-[#0D1117]">
+                <div className="text-center space-y-4">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-gray-600 dark:text-gray-400">Loading analysis results...</p>
+                </div>
+            </div>
+        );
+    }
+
+    const data = analysisData;
 
     const handleCopyComment = () => {
-        navigator.clipboard.writeText(data.prComment);
+        navigator.clipboard.writeText(data.prComment || "");
         alert("PR Comment copied to clipboard!");
     };
 
@@ -467,6 +418,10 @@ export default function ResultView({ onNavigate, analysisData }: ResultViewProps
                             </div>
                             
                             <div className="xl:col-span-4 flex flex-col gap-3">
+                                <button onClick={onPromote} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 transition-transform active:scale-95">
+                                    <CheckCircle size={18} />
+                                    Promote to Baseline Snapshot
+                                </button>
                                 <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-transform active:scale-95">
                                     <Zap className="fill-current" size={18} />
                                     Execute Complete Plan

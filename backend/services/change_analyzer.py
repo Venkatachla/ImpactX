@@ -23,38 +23,41 @@ class ChangeAnalyzer:
             
         try:
             repo = Repo(repo_path)
-            # Fetch last commit or current diff
+            # Fetch active working directory changes or staged changes
             diffs = repo.index.diff(None) + repo.index.diff('HEAD')
-            if not diffs:
-                # Use last commit if no active working directory changes
-                commits = list(repo.iter_commits(max_count=1))
-                if commits:
-                    diffs = commits[0].diff(commits[0].parents[0] if commits[0].parents else None)
             
             for diff in diffs:
-                if diff.a_path.endswith(".java"):
-                    # Check for renamed fields
-                    # Read current contents or diff string
+                path = diff.a_path or diff.b_path
+                if not path:
+                    continue
+                path_clean = path.replace("\\", "/")
+                
+                # Check java file changes
+                if path_clean.endswith(".java") or path_clean.endswith(".ts") or path_clean.endswith(".tsx"):
                     diff_text = diff.diff.decode('utf-8', errors='ignore') if diff.diff else ""
-                    renamed_match = re.search(r'-.*email.*;\s*\n\+.*primaryEmail.*;', diff_text)
-                    if renamed_match or "primaryEmail" in diff_text:
+                    
+                    # Look for field/variable renames
+                    rename_match = re.search(r'-(\s*\w+)\s*;\s*\n\+(\s*\w+)\s*;', diff_text)
+                    if rename_match:
                         return {
-                            "file": diff.a_path.replace("\\", "/"),
-                            "symbol": "email",
+                            "file": path_clean,
+                            "symbol": rename_match.group(1).strip(),
                             "changeType": "FIELD_RENAMED",
-                            "oldValue": "email",
-                            "newValue": "primaryEmail",
-                            "lines": [8, 9]
+                            "oldValue": rename_match.group(1).strip(),
+                            "newValue": rename_match.group(2).strip(),
+                            "lines": [1, 10]
                         }
+                    
+                    return {
+                        "file": path_clean,
+                        "symbol": os.path.basename(path_clean),
+                        "changeType": "GENERIC_FILE_CHANGE",
+                        "oldValue": "original",
+                        "newValue": "modified",
+                        "lines": [1, 5]
+                    }
         except Exception:
             pass
             
-        # Default to demo DTO scenario
-        return {
-            "file": "backend/dto/UserDTO.java",
-            "symbol": "email",
-            "changeType": "FIELD_RENAMED",
-            "oldValue": "email",
-            "newValue": "primaryEmail",
-            "lines": [8, 9]
-        }
+        # Return None if no real changes are detected
+        return None

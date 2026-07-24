@@ -21,8 +21,8 @@ const Logo = () => (
 const NAV_ICONS: Record<string, React.ElementType> = {
   dashboard: LayoutDashboard,
   import: Activity,
-  progress: Brain,
-  'select-change': Settings,
+  'select-change': Brain,
+  results: Settings,
   docs: Book,
   support: HelpCircle,
 };

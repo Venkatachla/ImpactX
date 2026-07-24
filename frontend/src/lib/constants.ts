@@ -102,10 +102,10 @@ export const CURRENT_USER: UserProfile = {
 };
 
 export const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Overview' },
-  { id: 'import', label: 'Analysis' },
-  { id: 'progress', label: 'Intelligence' },
-  { id: 'select-change', label: 'System' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'import', label: 'Project Import' },
+  { id: 'select-change', label: 'Architecture' },
+  { id: 'results', label: 'Impact Trace' },
 ];
 
 export const BOTTOM_NAV_ITEMS = [

@@ -10,7 +10,10 @@ export default function App() {
     const [currentView, setCurrentView] = useState('dashboard');
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [repoPath, setRepoPath] = useState('');
+    const [baselineData, setBaselineData] = useState<any>(null);
     const [analysisResult, setAnalysisResult] = useState<any>(null);
+    const [loadingBaseline, setLoadingBaseline] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -28,19 +31,44 @@ export default function App() {
 
     const handleImportRepo = (path: string) => {
         setRepoPath(path);
-        setCurrentView('select-change');
+        setLoadingBaseline(true);
+        setErrorMsg('');
+        setAnalysisResult(null);
+        setBaselineData(null);
+        setCurrentView('progress');
+
+        // Phase 1 - Baseline Map scan
+        fetch('http://localhost:8000/api/repositories/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repoPath: path })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Repository parsing failed.');
+            return res.json();
+        })
+        .then(data => {
+            setBaselineData(data);
+            setLoadingBaseline(false);
+            setCurrentView('select-change');
+        })
+        .catch(err => {
+            setLoadingBaseline(false);
+            setErrorMsg(err.message);
+            setCurrentView('import');
+        });
     };
 
     const handleSelectChange = (diffMode: string) => {
         setCurrentView('progress');
-        // Trigger actual analysis call to our FastAPI backend
+        // Phase 2 - Trigger active impact analysis
         fetch('http://localhost:8000/api/impact/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repoPath: repoPath || 'demo-repo', diffMode })
+            body: JSON.stringify({ repoPath: repoPath, diffMode })
         })
         .then(res => {
-            if (!res.ok) throw new Error('Analysis failed');
+            if (!res.ok) throw new Error('Blast radius analysis failed.');
             return res.json();
         })
         .then(data => {
@@ -48,9 +76,28 @@ export default function App() {
             setCurrentView('results');
         })
         .catch(err => {
-            console.error(err);
-            // Fallback so it doesn't get stuck if server is not running
-            setTimeout(() => setCurrentView('results'), 2000);
+            setErrorMsg(err.message);
+            setCurrentView('select-change');
+        });
+    };
+
+    const handlePromoteBaseline = () => {
+        // Promote changes to become the new baseline snapshot
+        fetch('http://localhost:8000/api/repositories/promote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repoPath: repoPath })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Failed to promote snapshot.');
+            return res.json();
+        })
+        .then(() => {
+            alert('Current state promoted as the new Baseline Snapshot successfully!');
+            setCurrentView('select-change');
+        })
+        .catch(err => {
+            alert(err.message);
         });
     };
 
@@ -58,9 +105,21 @@ export default function App() {
         switch(currentView) {
             case 'dashboard': return <DashboardView onNavigate={setCurrentView} />;
             case 'import': return <ImportView onNavigate={handleImportRepo} />;
-            case 'select-change': return <ChangeSelectionView onNavigate={handleSelectChange} />;
+            case 'select-change': return (
+                <ChangeSelectionView 
+                    onNavigate={handleSelectChange} 
+                    baselineData={baselineData} 
+                    errorMsg={errorMsg}
+                />
+            );
             case 'progress': return <ProgressView onNavigate={setCurrentView} />;
-            case 'results': return <ResultView onNavigate={setCurrentView} analysisData={analysisResult} />;
+            case 'results': return (
+                <ResultView 
+                    onNavigate={setCurrentView} 
+                    analysisData={analysisResult} 
+                    onPromote={handlePromoteBaseline}
+                />
+            );
             default: return <DashboardView onNavigate={setCurrentView} />;
         }
     }
