@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Upload, PlayCircle, Rocket, Shield, Activity, GitBranch, Key, Info } from 'lucide-react';
 
-export default function ImportView({ onNavigate }: { onNavigate: (view: string) => void }) {
+export default function ImportView({ onNavigate }: { onNavigate: (path: string) => void }) {
+    const [path, setPath] = useState('');
+
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
@@ -40,20 +42,22 @@ export default function ImportView({ onNavigate }: { onNavigate: (view: string) 
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Git Repository</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Connect via HTTPS or SSH URL</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Connect via HTTPS, SSH, or Local Directory Path</p>
                         </div>
                     </div>
 
                     <div className="space-y-6 flex-1 relative z-10">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Repository URL</label>
+                            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Repository Path or URL</label>
                             <div className="relative">
                                 <input 
                                     type="text" 
-                                    placeholder="https://github.com/org/repo.git"
+                                    value={path}
+                                    onChange={(e) => setPath(e.target.value)}
+                                    placeholder="e.g. C:/Users/rohit/Downloads/ImpactX/demo-repo or git URL"
                                     className="w-full bg-gray-50 dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] text-gray-900 dark:text-gray-100 rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-shadow pr-10"
                                 />
-                                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Private repositories require personal access tokens">
+                                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Specify local folder path to analyze directly.">
                                     <Info size={18} />
                                 </button>
                             </div>
@@ -72,7 +76,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (view: string) 
                                 <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Auth Method</label>
                                 <div className="flex gap-2">
                                     <button className="flex-1 py-3 px-2 bg-gray-100 dark:bg-[#21262D] border border-gray-200 dark:border-[#30363D] rounded-lg text-xs font-bold text-gray-900 dark:text-white flex items-center justify-center gap-2">
-                                        <Shield size={16} /> Public
+                                        <Shield size={16} /> Public / Local
                                     </button>
                                     <button className="flex-1 py-3 px-2 bg-white dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] hover:border-blue-500/50 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2 transition-colors">
                                         <Key size={16} /> Token
@@ -87,7 +91,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (view: string) 
                             Agentic analyzers will scan commit history and dependency graphs upon connection.
                         </p>
                         <button 
-                            onClick={() => onNavigate('progress')}
+                            onClick={() => onNavigate(path || 'demo-repo')}
                             className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
                         >
                             Connect Repository
@@ -125,7 +129,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (view: string) 
                             Instant access to a microservices architecture sample. No configuration required.
                         </p>
                         <button 
-                            onClick={() => onNavigate('select-change')}
+                            onClick={() => onNavigate('demo-repo')}
                             className="w-full bg-gray-50 dark:bg-[#21262D] hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-gray-200 dark:border-[#30363D] hover:border-blue-500 text-gray-900 dark:text-white py-3 rounded font-bold flex items-center justify-center gap-2 transition-colors"
                         >
                             Explore with Demo
@@ -141,7 +145,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (view: string) 
                     <Shield className="text-blue-500 shrink-0" size={24} />
                     <div>
                         <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-1">Secure Intelligence</h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">All code processing occurs in isolated ephemeral containers. We do not store raw source code permanently.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">All code processing occurs in ephemeral containers. We do not store raw source code permanently.</p>
                     </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-[#161B22]/50 border border-gray-200 dark:border-[#30363D]/50 p-4 rounded-lg flex gap-4">

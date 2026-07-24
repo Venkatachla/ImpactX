@@ -6,11 +6,11 @@ export default function ChangeSelectionView({ onNavigate }: { onNavigate: (view:
 
     const changes = [
         {
-            id: 'dto',
+            id: 'demo',
             icon: Database,
             title: 'Rename UserDTO.email → primaryEmail',
             description: 'Database schema migration and DTO field rename.',
-            tag: 'DTO_SCHEMA_CHANGED'
+            tag: 'FIELD_RENAMED'
         },
         {
             id: 'signature',
@@ -70,7 +70,7 @@ export default function ChangeSelectionView({ onNavigate }: { onNavigate: (view:
 
             <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-[#30363D]">
                 <button 
-                    onClick={() => onNavigate('progress')}
+                    onClick={() => onNavigate(selectedChange)}
                     className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
                 >
                     Analyze Impact

@@ -6,13 +6,86 @@ import {
 import { Badge } from '../components/Badge';
 import { THEME_CLASSES } from '../lib/constants';
 
-export default function ResultView({ onNavigate }: { onNavigate: (view: string) => void }) {
+interface ResultViewProps {
+    onNavigate: (view: string) => void;
+    analysisData?: any;
+}
+
+export default function ResultView({ onNavigate, analysisData }: ResultViewProps) {
     const [activeTab, setActiveTab] = useState('Overview');
     const [isReplaying, setIsReplaying] = useState(false);
 
     const handleReplay = () => {
         setIsReplaying(true);
         setTimeout(() => setIsReplaying(false), 3000);
+    };
+
+    // Fallback static structure matching dynamic shape if analysisData isn't loaded
+    const data = analysisData || {
+        change: {
+            file: "backend/dto/UserDTO.java",
+            symbol: "email",
+            changeType: "FIELD_RENAMED",
+            oldValue: "email",
+            newValue: "primaryEmail",
+            lines: [8, 9]
+        },
+        risk: {
+            score: 87,
+            level: "CRITICAL",
+            confidence: 94,
+            breakdown: [
+                { factor: "DTO schema field rename (FIELD_RENAMED)", score: 23 },
+                { factor: "Public API contract exposure", score: 20 },
+                { factor: "Direct dependents impacted (3 nodes)", score: 15 },
+                { factor: "Transitive blast radius reach (4 nodes)", score: 10 },
+                { factor: "Critical Area (Authentication/Identity component)", score: 10 },
+                { factor: "CI trigger workflow affected", score: 5 },
+                { factor: "Cross-team impact (Identity & Frontend)", score: 5 }
+            ]
+        },
+        summary: {
+            files: 12,
+            modules: 4,
+            services: 3,
+            apis: 2,
+            tests: 6,
+            teams: 2,
+            ciWorkflows: 2
+        },
+        impacts: [
+            { name: "UserService", type: "SERVICE", impact: "DIRECT", reason: "UserService depends directly on UserDTO", path: "backend/service/UserService.java" },
+            { name: "AuthService", type: "SERVICE", impact: "TRANSITIVE", reason: "AuthService references UserService", path: "backend/service/AuthService.java" },
+            { name: "NotificationService", type: "SERVICE", impact: "TRANSITIVE", reason: "NotificationService logs UserDTO field", path: "backend/service/NotificationService.java" },
+            { name: "UserController", type: "CONTROLLER", impact: "DIRECT", reason: "UserController returns UserDTO in REST paths", path: "backend/controller/UserController.java" },
+            { name: "GET /api/users/{id}", type: "API", impact: "DIRECT", reason: "API contract schema includes the changed UserDTO model", path: "GET /api/users/{id}" },
+            { name: "ProfilePage.tsx", type: "FRONTEND", impact: "TRANSITIVE", reason: "Consumes GET /api/users/{id} and accesses user.email", path: "frontend/pages/ProfilePage.tsx" }
+        ],
+        tests: [
+            { name: "UserControllerTest.java", score: 98, category: "MUST RUN", reason: "Directly tests the affected controller layer." },
+            { name: "UserServiceTest.java", score: 91, category: "MUST RUN", reason: "Tests direct dependency of the changed DTO/Service." },
+            { name: "AuthIntegrationTest.java", score: 82, category: "RECOMMENDED", reason: "Exercises the affected user authentication API flow." }
+        ],
+        teams: [
+            { name: "Identity Team", components: 5, reason: "Owns UserDTO, UserController, UserService, and AuthService." },
+            { name: "Frontend Team", components: 2, reason: "Owns frontend consumers of the affected API." }
+        ],
+        ci: [
+            { name: "backend-ci.yml", affected: "YES", reason: "Backend DTO/API components are in blast radius.", jobs: ["build", "unit-tests", "integration-tests"] },
+            { name: "frontend-ci.yml", affected: "YES", reason: "Frontend API consumer is affected.", jobs: ["build", "contract-tests"] }
+        ],
+        aiAnalysis: {
+            failureExplanation: "The frontend ProfilePage.tsx expects 'user.email' from the GET /api/users/{id} API. Because the DTO field was renamed to 'primaryEmail', the API response will omit 'email', causing 'user.email' to evaluate to undefined and crash the rendering script.",
+            remediation: "Update the frontend API consumer in ProfilePage.tsx to reference user.primaryEmail, or implement a backend serialization alias to maintain backwards compatibility.",
+            migrationAdvice: "Add a serialization alias @JsonProperty(\"email\") on UserDTO.primaryEmail during a 30-day migration period, allowing legacy clients to transition safely.",
+            suggestedTest: "Add a compatibility test verifying that requesting /api/users/{id} returns both 'email' and 'primaryEmail' properties in the payload."
+        },
+        prComment: "⚡ **ImpactX Change Analysis**\n\nRisk: 🔴 **CRITICAL** — 87/100"
+    };
+
+    const handleCopyComment = () => {
+        navigator.clipboard.writeText(data.prComment);
+        alert("PR Comment copied to clipboard!");
     };
 
     return (
@@ -23,17 +96,19 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-[10px] font-bold font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/30">MERGE REQUEST #482</span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">commerce-platform / main</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{data.change.file}</span>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">UserDTO Field Rename</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                            {data.change.changeType}: {data.change.symbol} &rarr; {data.change.newValue}
+                        </h2>
                         <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                             <span className="flex items-center gap-1">Analyzed just now</span>
                             <span className="flex items-center gap-1">CI/CD Bot</span>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <button className="px-4 py-2 border border-gray-200 dark:border-[#30363D] text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-[#21262D] transition-colors flex items-center gap-2 text-sm font-medium">
-                            <Share2 size={16} /> Share
+                        <button onClick={handleCopyComment} className="px-4 py-2 border border-gray-200 dark:border-[#30363D] text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-[#21262D] transition-colors flex items-center gap-2 text-sm font-medium">
+                            <Share2 size={16} /> Copy PR Comment
                         </button>
                         <button className="px-4 py-2 border border-gray-200 dark:border-[#30363D] text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-[#21262D] transition-colors flex items-center gap-2 text-sm font-medium">
                             <Download size={16} /> Export
@@ -51,23 +126,23 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                 <circle className="text-gray-100 dark:text-[#21262D]" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" strokeWidth="4"></circle>
                                 <circle className="text-red-500" cx="28" cy="28" fill="transparent" r="24" stroke="currentColor" strokeDasharray="150" strokeDashoffset="19.5" strokeWidth="4"></circle>
                             </svg>
-                            <span className="absolute text-sm font-bold text-red-500">87</span>
+                            <span className="absolute text-sm font-bold text-red-500">{data.risk.score}</span>
                         </div>
                         <div>
-                            <h3 className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Critical Risk</h3>
+                            <h3 className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{data.risk.level} Risk</h3>
                             <p className="text-xs text-gray-700 dark:text-gray-300 max-w-[200px] leading-tight">High-confidence API contract change.</p>
                         </div>
                     </div>
                     
                     <div className="flex items-center gap-6 md:gap-8 shrink-0">
                         {[
-                            { label: 'Files', value: '12' },
-                            { label: 'Modules', value: '4' },
-                            { label: 'Services', value: '3' },
-                            { label: 'APIs', value: '2' },
-                            { label: 'Tests', value: '6' },
-                            { label: 'Teams', value: '2' },
-                            { label: 'CI Workflows', value: '2' }
+                            { label: 'Files', value: data.summary.files.toString() },
+                            { label: 'Modules', value: data.summary.modules.toString() },
+                            { label: 'Services', value: data.summary.services.toString() },
+                            { label: 'APIs', value: data.summary.apis.toString() },
+                            { label: 'Tests', value: data.summary.tests.toString() },
+                            { label: 'Teams', value: data.summary.teams.toString() },
+                            { label: 'CI Workflows', value: data.summary.ciWorkflows.toString() }
                         ].map(stat => (
                             <div key={stat.label} className="flex flex-col">
                                 <span className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</span>
@@ -109,31 +184,25 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                 <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm`}>
                                     <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6">Change Risk Score</h3>
                                     <div className="flex items-center gap-6">
-                                        <div className="text-6xl font-bold text-red-500">87</div>
+                                        <div className="text-6xl font-bold text-red-500">{data.risk.score}</div>
                                         <div className="space-y-1">
-                                            <div className="text-xl font-bold text-gray-900 dark:text-white">CRITICAL</div>
-                                            <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">Confidence: 94%</div>
+                                            <div className="text-xl font-bold text-gray-900 dark:text-white">{data.risk.level}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">Confidence: {data.risk.confidence}%</div>
                                         </div>
                                     </div>
                                     <div className="mt-6 pt-4 border-t border-gray-200 dark:border-[#30363D] space-y-3">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">DTO/API breaking change</span>
-                                            <span className="font-mono text-gray-900 dark:text-white">+25</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">Public API exposure</span>
-                                            <span className="font-mono text-gray-900 dark:text-white">+20</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">Direct dependencies</span>
-                                            <span className="font-mono text-gray-900 dark:text-white">+15</span>
-                                        </div>
+                                        {data.risk.breakdown.map((b: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between text-sm">
+                                                <span className="text-gray-600 dark:text-gray-400">{b.factor}</span>
+                                                <span className="font-mono text-gray-900 dark:text-white">+{b.score}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                                 <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm flex flex-col justify-center`}>
                                     <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">AI Executive Summary</h3>
                                     <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm">
-                                        The rename of <code className="bg-gray-100 dark:bg-[#0D1117] px-1 py-0.5 rounded text-red-600 dark:text-red-400">UserDTO.email</code> to <code className="bg-gray-100 dark:bg-[#0D1117] px-1 py-0.5 rounded text-green-600 dark:text-green-400">UserDTO.primaryEmail</code> propagates through 3 backend services and breaks 2 public API endpoints. This change will directly cause runtime undefined errors in <span className="font-mono text-xs font-bold">ProfilePage.tsx</span> on the frontend. Two CI workflows require updates, and both the Identity and Frontend teams must review.
+                                        {data.aiAnalysis.failureExplanation}
                                     </p>
                                 </div>
                             </div>
@@ -172,7 +241,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                             <span className="font-bold text-gray-900 dark:text-white">AuthService</span>
                                         </div>
                                         <div className="bg-white dark:bg-[#161B22] border border-red-500 rounded-xl px-4 py-2 text-center relative shadow-lg shadow-red-500/20">
-                                            <span className="font-mono text-sm font-bold text-gray-900 dark:text-white">GET /api/users</span>
+                                            <span className="font-mono text-sm font-bold text-gray-900 dark:text-white">GET /api/users/*</span>
                                         </div>
                                     </div>
 
@@ -204,18 +273,18 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                             <FileCode size={20} className="text-red-500" /> ProfilePage.tsx
                                         </h4>
                                         <Badge variant="critical">Critical Impact</Badge>
-                                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Confidence: 96%</div>
+                                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Confidence: {data.risk.confidence}%</div>
                                     </div>
 
                                     <div className="space-y-3">
                                         <h5 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Dependency Path</h5>
                                         <div className="bg-gray-50 dark:bg-[#0D1117] p-3 rounded-lg border border-gray-200 dark:border-[#30363D] text-sm font-mono text-gray-700 dark:text-gray-300 space-y-2">
                                             <div>UserDTO.email</div>
-                                            <div className="pl-2 text-gray-400">↓</div>
+                                            <div className="pl-2 text-gray-400">&darr;</div>
                                             <div className="pl-4">UserController</div>
-                                            <div className="pl-6 text-gray-400">↓</div>
-                                            <div className="pl-8 text-blue-600 dark:text-blue-400">GET /api/users/{'{'}id{'}'}</div>
-                                            <div className="pl-10 text-gray-400">↓</div>
+                                            <div className="pl-6 text-gray-400">&darr;</div>
+                                            <div className="pl-8 text-blue-600 dark:text-blue-400">GET /api/users/*</div>
+                                            <div className="pl-10 text-gray-400">&darr;</div>
                                             <div className="pl-12 font-bold text-red-600 dark:text-red-400">ProfilePage.tsx</div>
                                         </div>
                                     </div>
@@ -223,7 +292,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                     <div className="space-y-2">
                                         <h5 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Why Affected?</h5>
                                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            Frontend expects <code className="bg-gray-100 dark:bg-[#0D1117] px-1 rounded">user.email</code> from the API, but the new contract exposes <code className="bg-gray-100 dark:bg-[#0D1117] px-1 rounded">user.primaryEmail</code>. This will result in an undefined error at runtime.
+                                            {data.aiAnalysis.failureExplanation}
                                         </p>
                                     </div>
                                 </div>
@@ -234,50 +303,18 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                     {/* TAB: IMPACTS */}
                     {activeTab === 'Impacts' && (
                         <div className="space-y-6">
-                            <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 shadow-sm">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Affected Services</h3>
+                            <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm`}>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Affected Components</h3>
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                        <div>
-                                            <div className="font-bold text-gray-900 dark:text-white">UserService</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">Direct dependency</div>
+                                    {data.impacts.map((imp: any, idx: number) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
+                                            <div>
+                                                <div className="font-bold text-gray-900 dark:text-white">{imp.name}</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">{imp.reason}</div>
+                                            </div>
+                                            <Badge variant={imp.impact.toLowerCase() as any}>{imp.impact}</Badge>
                                         </div>
-                                        <Badge variant="critical">Critical</Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                        <div>
-                                            <div className="font-bold text-gray-900 dark:text-white">AuthService</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">Transitive dependency</div>
-                                        </div>
-                                        <Badge variant="high">High</Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                        <div>
-                                            <div className="font-bold text-gray-900 dark:text-white">NotificationService</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">Consumes changed user data</div>
-                                        </div>
-                                        <Badge variant="medium">Medium</Badge>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 shadow-sm">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">API Contract Impact</h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D] border-l-4 border-l-red-500">
-                                        <div>
-                                            <div className="font-mono text-sm font-bold text-gray-900 dark:text-white">GET /api/users/{'{'}id{'}'}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Returns UserDTO schema</div>
-                                        </div>
-                                        <Badge variant="critical">Contract at Risk</Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D] border-l-4 border-l-red-500">
-                                        <div>
-                                            <div className="font-mono text-sm font-bold text-gray-900 dark:text-white">PUT /api/users/{'{'}id{'}'}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Accepts UserDTO schema</div>
-                                        </div>
-                                        <Badge variant="critical">Contract at Risk</Badge>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -285,7 +322,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
 
                     {/* TAB: TEST PLAN */}
                     {activeTab === 'Test Plan' && (
-                        <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl overflow-hidden shadow-sm">
+                        <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl overflow-hidden shadow-sm`}>
                             <div className="p-6 border-b border-gray-200 dark:border-[#30363D] bg-gray-50 dark:bg-[#21262D]">
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <TestTube size={24} className="text-blue-600 dark:text-blue-400" /> Targeted Test Plan
@@ -294,49 +331,28 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                             <div className="p-6 space-y-8">
                                 <div>
                                     <h4 className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <AlertTriangle size={14} /> Must Run (Critical Path)
+                                        <AlertTriangle size={14} /> Recommended Test Suite execution
                                     </h4>
                                     <div className="space-y-3">
-                                        <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <div className="font-mono font-bold text-gray-900 dark:text-white">UserControllerTest</div>
-                                                <span className="text-sm font-bold text-green-600 dark:text-green-400">98% Match</span>
+                                        {data.tests.map((test: any, idx: number) => (
+                                            <div key={idx} className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <div className="font-mono font-bold text-gray-900 dark:text-white">{test.name}</div>
+                                                    <span className="text-sm font-bold text-green-600 dark:text-green-400">{test.score}% Match</span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">{test.reason}</p>
                                             </div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Directly tests the affected controller layer.</p>
-                                        </div>
-                                        <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <div className="font-mono font-bold text-gray-900 dark:text-white">UserServiceTest</div>
-                                                <span className="text-sm font-bold text-green-600 dark:text-green-400">92% Match</span>
-                                            </div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Tests direct dependency of the changed DTO.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <CheckCircle size={14} /> Recommended
-                                    </h4>
-                                    <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <div className="font-mono font-bold text-gray-900 dark:text-white">AuthIntegrationTest</div>
-                                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">81% Match</span>
-                                        </div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">Exercises the affected user authentication API flow.</p>
+                                        ))}
                                     </div>
                                 </div>
 
                                 <div>
                                     <h4 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <Info size={14} /> Missing Coverage
+                                        <Info size={14} /> Missing Coverage Suggestion
                                     </h4>
                                     <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-lg">
                                         <p className="text-sm text-yellow-800 dark:text-yellow-400 mb-2 font-medium">
-                                            No test verifies backward compatibility of the "email" response field.
-                                        </p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            <strong>Suggested Test:</strong> Verify API response compatibility to ensure legacy clients do not break during rollout.
+                                            {data.aiAnalysis.suggestedTest}
                                         </p>
                                     </div>
                                 </div>
@@ -348,61 +364,45 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                     {activeTab === 'Teams & CI' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Teams */}
-                            <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 shadow-sm">
+                            <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm`}>
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6">
                                     <Users size={24} className="text-blue-600 dark:text-blue-400" /> Affected Teams
                                 </h3>
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-red-200 dark:border-red-900/30">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                                            <h4 className="font-bold text-gray-900 dark:text-white">Identity Team</h4>
+                                    {data.teams.map((t: any, idx: number) => (
+                                        <div key={idx} className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-red-200 dark:border-red-900/30">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                                <h4 className="font-bold text-gray-900 dark:text-white">{t.name}</h4>
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t.components} affected components</div>
+                                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                                                <strong>Reason:</strong> {t.reason}
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">5 affected components • 2 critical impacts</div>
-                                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                                            <strong>Reason:</strong> Owns <code className="bg-white dark:bg-[#161B22] px-1 rounded">UserDTO</code> and <code className="bg-white dark:bg-[#161B22] px-1 rounded">UserController</code>.
-                                        </div>
-                                    </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-orange-200 dark:border-orange-900/30">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                                            <h4 className="font-bold text-gray-900 dark:text-white">Frontend Team</h4>
-                                        </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">2 affected components</div>
-                                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                                            <strong>Reason:</strong> Consumes affected user API in Profile features.
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
 
                             {/* CI */}
-                            <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 shadow-sm">
+                            <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm`}>
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6">
                                     <GitCommit size={24} className="text-blue-600 dark:text-blue-400" /> CI Workflows Impacted
                                 </h3>
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                        <h4 className="font-mono font-bold text-gray-900 dark:text-white mb-2">backend-ci.yml</h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                            <strong>Reason:</strong> Backend DTO/API changed.
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded">Build</span>
-                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded">Unit Tests</span>
-                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded">Integration</span>
+                                    {data.ci.map((w: any, idx: number) => (
+                                        <div key={idx} className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
+                                            <h4 className="font-mono font-bold text-gray-900 dark:text-white mb-2">{w.name}</h4>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                <strong>Reason:</strong> {w.reason}
+                                            </p>
+                                            <div className="flex gap-2">
+                                                {w.jobs.map((job: string, jIdx: number) => (
+                                                    <span key={jIdx} className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded">{job}</span>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D]">
-                                        <h4 className="font-mono font-bold text-gray-900 dark:text-white mb-2">frontend-ci.yml</h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                            <strong>Reason:</strong> Frontend consumes affected API.
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded">Frontend Build</span>
-                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded">Contract Tests</span>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -413,7 +413,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                             <div className="xl:col-span-8 space-y-6">
                                 {/* Card 1 */}
-                                <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl overflow-hidden flex flex-col shadow-sm">
+                                <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl overflow-hidden flex flex-col shadow-sm`}>
                                     <div className="px-4 py-3 bg-gray-50 dark:bg-[#21262D] border-b border-gray-200 dark:border-[#30363D] flex justify-between items-center">
                                         <div className="flex items-center gap-3">
                                             <Badge variant="critical">Critical</Badge>
@@ -423,7 +423,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                     </div>
                                     <div className="p-5 space-y-4">
                                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            Update the frontend consumer to use the new API property. The legacy <code className="bg-gray-100 dark:bg-[#0D1117] text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded text-xs font-mono">email</code> field is deprecated in the GraphQL schema.
+                                            {data.aiAnalysis.remediation}
                                         </p>
                                         
                                         <div className="bg-gray-50 dark:bg-[#0D1117] rounded-lg border border-gray-200 dark:border-[#30363D] overflow-hidden text-sm font-mono leading-6">
@@ -445,11 +445,6 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="px-5 py-3 bg-gray-50 dark:bg-[#0D1117] border-t border-gray-200 dark:border-[#30363D] flex justify-end gap-3">
-                                        <button className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm">
-                                            <Zap size={14} className="fill-current" /> Apply Fix
-                                        </button>
-                                    </div>
                                 </div>
 
                                 {/* Alternative Option */}
@@ -462,17 +457,10 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                             <CheckCircle size={24} className="fill-current text-blue-100 dark:text-blue-900/40" />
                                         </div>
                                         <div className="space-y-2">
-                                            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400">SAFER MIGRATION OPTION</h3>
+                                            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400">SAFEST MIGRATION STRATEGY</h3>
                                             <p className="text-sm text-gray-700 dark:text-gray-300">
-                                                Instead of an immediate breaking change, use a <span className="font-mono text-orange-600 dark:text-orange-400">serialization alias</span>. This allows both <code className="text-xs bg-white dark:bg-[#0D1117] px-1 py-0.5 rounded border border-gray-200 dark:border-[#30363D]">email</code> and <code className="text-xs bg-white dark:bg-[#0D1117] px-1 py-0.5 rounded border border-gray-200 dark:border-[#30363D]">primaryEmail</code> to function during the 30-day transition period.
+                                                {data.aiAnalysis.migrationAdvice}
                                             </p>
-                                            <div className="flex items-center gap-3 pt-2">
-                                                <button className="text-sm font-bold text-blue-600 dark:text-blue-400 underline decoration-blue-300 hover:decoration-blue-600 transition-colors">
-                                                    View compatibility script
-                                                </button>
-                                                <span className="text-gray-400">•</span>
-                                                <span className="text-sm text-gray-500 dark:text-gray-400">Reduces deployment risk by 68%</span>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -483,7 +471,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                     <Zap className="fill-current" size={18} />
                                     Execute Complete Plan
                                 </button>
-                                <button className="w-full border border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] py-3 rounded-lg font-bold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors shadow-sm">
+                                <button onClick={handleCopyComment} className="w-full border border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] py-3 rounded-lg font-bold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors shadow-sm">
                                     Export PR Draft
                                 </button>
                             </div>
