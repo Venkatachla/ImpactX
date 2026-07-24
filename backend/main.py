@@ -72,8 +72,29 @@ def promote_baseline(req: AnalyzeRepoRequest):
 
 @app.post("/api/repositories/analyze")
 def analyze_repository(req: AnalyzeRepoRequest):
-    # Resolve relative/absolute path
+    # Resolve relative/absolute path or clone remote git url
     path = req.repoPath
+    if path.startswith("http://") or path.startswith("https://"):
+        import tempfile
+        import shutil
+        from git import Repo
+        
+        # Create a unique temporary directory name in workspace
+        safe_name = re.sub(r'[^a-zA-Z0-9]', '_', path)
+        temp_dir = os.path.join(os.path.dirname(__file__), "..", "cloned_repos", safe_name)
+        if os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception:
+                pass
+        
+        os.makedirs(temp_dir, exist_ok=True)
+        try:
+            Repo.clone_from(path, temp_dir)
+            path = temp_dir
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to clone remote repository: {str(e)}")
+            
     if not os.path.exists(path):
         # Fallback to local demo-repo
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo-repo"))
@@ -126,7 +147,12 @@ def analyze_repository(req: AnalyzeRepoRequest):
 
 @app.post("/api/impact/analyze")
 def analyze_impact(req: AnalyzeImpactRequest):
+    # Resolve path or clone remote git url
     path = req.repoPath
+    if path.startswith("http://") or path.startswith("https://"):
+        safe_name = re.sub(r'[^a-zA-Z0-9]', '_', path)
+        path = os.path.join(os.path.dirname(__file__), "..", "cloned_repos", safe_name)
+
     if not os.path.exists(path):
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo-repo"))
         

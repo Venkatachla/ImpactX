@@ -39,6 +39,28 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
         alert("PR Comment copied to clipboard!");
     };
 
+    if (!data.change) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-[#0D1117] p-8">
+                <div className="text-center space-y-6 max-w-md">
+                    <div className="w-16 h-16 bg-gray-100 dark:bg-[#161B22] rounded-full flex items-center justify-center text-gray-500 mx-auto">
+                        <Info size={32} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">No Changes Detected</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                        There are no local working tree changes or diff comparisons detected in this repository baseline snapshot.
+                    </p>
+                    <button 
+                        onClick={() => onNavigate('select-change')}
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+                    >
+                        Back to Architecture
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-[#0D1117] min-w-0">
             {/* Header */}

@@ -8,7 +8,7 @@ interface ChangeSelectionViewProps {
 }
 
 export default function ChangeSelectionView({ onNavigate, baselineData, errorMsg }: ChangeSelectionViewProps) {
-    const [selectedChange, setSelectedChange] = useState('demo');
+    const [selectedChange, setSelectedChange] = useState('git');
 
     // Baseline details
     const meta = baselineData?.metadata || {};
