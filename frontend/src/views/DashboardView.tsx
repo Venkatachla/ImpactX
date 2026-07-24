@@ -1,6 +1,7 @@
 import React from 'react';
-import { Plus, Upload, Warning, FileText, CheckCircle2, ArrowRight, Brain } from 'lucide-react';
+import { Plus, Upload, FileText, CheckCircle2, ArrowRight, Brain } from 'lucide-react';
 import { Badge } from '../components/Badge';
+import { THEME_CLASSES, RECENT_ANALYSES_STATS, SUMMARY_STATS, RECENT_ANALYSES } from '../lib/constants';
 
 export default function DashboardView({ onNavigate }: { onNavigate: (view: string) => void }) {
     return (
@@ -25,7 +26,7 @@ export default function DashboardView({ onNavigate }: { onNavigate: (view: strin
 
             {/* Hero Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8 bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] p-8 rounded-xl relative overflow-hidden group">
+                <div className={`lg:col-span-8 ${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} p-8 rounded-xl relative overflow-hidden group`}>
                     <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #8B5CF6 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
                     <div className="relative z-10">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Analyze your next change</h3>
@@ -50,27 +51,22 @@ export default function DashboardView({ onNavigate }: { onNavigate: (view: strin
                     </div>
                 </div>
 
-                <div className="lg:col-span-4 bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] p-6 rounded-xl flex flex-col justify-between">
+                <div className={`lg:col-span-4 ${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} p-6 rounded-xl flex flex-col justify-between`}>
                     <h4 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6">Change Risk Distribution</h4>
                     <div className="space-y-4">
-                        {[
-                            { label: 'Critical Risk', value: 8, color: 'bg-red-500' },
-                            { label: 'High Risk', value: 19, color: 'bg-orange-500' },
-                            { label: 'Medium Risk', value: 31, color: 'bg-blue-500' },
-                            { label: 'Low Risk', value: 42, color: 'bg-blue-600 dark:bg-blue-400' },
-                        ].map((stat, i) => (
+                        {RECENT_ANALYSES_STATS.map((stat, i) => (
                             <div key={i} className="space-y-1">
                                 <div className="flex justify-between text-xs">
                                     <span className="text-gray-600 dark:text-gray-400">{stat.label}</span>
                                     <span className="font-bold text-gray-900 dark:text-white">{stat.value}%</span>
                                 </div>
-                                <div className="h-1.5 w-full bg-gray-100 dark:bg-[#0D1117] rounded-full overflow-hidden">
+                                <div className={`h-1.5 w-full ${THEME_CLASSES.subtleBg} rounded-full overflow-hidden`}>
                                     <div className={`h-full ${stat.color}`} style={{ width: `${stat.value}%` }}></div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-[#30363D]">
+                    <div className={`mt-6 pt-4 ${THEME_CLASSES.cardBorder} border-t-1 border-x-0 border-b-0`}>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Based on last <span className="font-bold text-gray-900 dark:text-white">124 analyses</span></p>
                     </div>
                 </div>
@@ -78,13 +74,8 @@ export default function DashboardView({ onNavigate }: { onNavigate: (view: strin
 
             {/* Stats Row */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Projects', value: '8' },
-                    { label: 'Analyses', value: '47' },
-                    { label: 'High-Risk Changes', value: '12', alert: true },
-                    { label: 'Issues Prevented', value: '126', success: true }
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] p-4 rounded-xl flex flex-col justify-between">
+                {SUMMARY_STATS.map((stat, i) => (
+                    <div key={i} className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} p-4 rounded-xl flex flex-col justify-between`}>
                         <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{stat.label}</span>
                         <div className="flex items-end justify-between mt-2">
                             <span className={`text-3xl font-bold ${stat.alert ? 'text-red-500' : stat.success ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
@@ -106,84 +97,35 @@ export default function DashboardView({ onNavigate }: { onNavigate: (view: strin
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
-                            <tr className="bg-gray-50 dark:bg-[#0D1117]/50">
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-[#30363D]">Analysis</th>
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-[#30363D]">Project</th>
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-[#30363D]">Change</th>
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-[#30363D] text-center">Risk</th>
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-[#30363D]">Impacted</th>
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-[#30363D]">Date</th>
+                            <tr className={`${THEME_CLASSES.subtleBg}/50`}>
+                                <th className={`px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${THEME_CLASSES.cardBorder} border-t-0 border-x-0 border-b-1`}>Analysis</th>
+                                <th className={`px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${THEME_CLASSES.cardBorder} border-t-0 border-x-0 border-b-1`}>Project</th>
+                                <th className={`px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${THEME_CLASSES.cardBorder} border-t-0 border-x-0 border-b-1`}>Change</th>
+                                <th className={`px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${THEME_CLASSES.cardBorder} border-t-0 border-x-0 border-b-1 text-center`}>Risk</th>
+                                <th className={`px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${THEME_CLASSES.cardBorder} border-t-0 border-x-0 border-b-1`}>Impacted</th>
+                                <th className={`px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${THEME_CLASSES.cardBorder} border-t-0 border-x-0 border-b-1`}>Date</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-[#30363D]">
-                            <tr className="hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors cursor-pointer group" onClick={() => onNavigate('results')}>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="text-blue-600 dark:text-blue-400" size={18} />
-                                        <span className="font-bold text-gray-900 dark:text-white">Authentication Refactor</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 bg-gray-100 dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] rounded text-xs font-mono text-gray-900 dark:text-gray-300">commerce-api</span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">Method Signature</td>
-                                <td className="px-6 py-4 text-center">
-                                    <Badge variant="critical">Critical 91</Badge>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">24 files</td>
-                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">2 min ago</td>
-                            </tr>
-                            <tr className="hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors cursor-pointer group" onClick={() => onNavigate('progress')}>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="text-blue-600 dark:text-blue-400" size={18} />
-                                        <span className="font-bold text-gray-900 dark:text-white">Database Schema Update</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 bg-gray-100 dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] rounded text-xs font-mono text-gray-900 dark:text-gray-300">user-service</span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">SQL Migration</td>
-                                <td className="px-6 py-4 text-center">
-                                    <Badge variant="high">High 74</Badge>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">12 files</td>
-                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">15 min ago</td>
-                            </tr>
-                            <tr className="hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors cursor-pointer group">
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="text-blue-600 dark:text-blue-400" size={18} />
-                                        <span className="font-bold text-gray-900 dark:text-white">UI Theme Migration</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 bg-gray-100 dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] rounded text-xs font-mono text-gray-900 dark:text-gray-300">dashboard-web</span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">CSS Variable Mapping</td>
-                                <td className="px-6 py-4 text-center">
-                                    <Badge variant="medium">Medium 42</Badge>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">156 files</td>
-                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">45 min ago</td>
-                            </tr>
-                            <tr className="hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors cursor-pointer group">
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="text-blue-600 dark:text-blue-400" size={18} />
-                                        <span className="font-bold text-gray-900 dark:text-white">CI Pipeline Optimization</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="px-2 py-1 bg-gray-100 dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] rounded text-xs font-mono text-gray-900 dark:text-gray-300">infra-templates</span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">YAML Config</td>
-                                <td className="px-6 py-4 text-center">
-                                    <Badge variant="low">Low 12</Badge>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">2 files</td>
-                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">1 hour ago</td>
-                            </tr>
+                            {RECENT_ANALYSES.map((item) => (
+                                <tr key={item.id} className={`${THEME_CLASSES.hoverBg} transition-colors cursor-pointer group`} onClick={() => onNavigate(item.targetView)}>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="text-blue-600 dark:text-blue-400" size={18} />
+                                            <span className="font-bold text-gray-900 dark:text-white">{item.title}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 ${THEME_CLASSES.subtleBg} ${THEME_CLASSES.cardBorder} rounded text-xs font-mono text-gray-900 dark:text-gray-300`}>{item.project}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{item.changeType}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <Badge variant={item.riskVariant}>{item.riskLabel}</Badge>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">{item.impactedFiles}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{item.date}</td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>

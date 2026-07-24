@@ -2,6 +2,8 @@ import { cn } from '../lib/utils';
 import React from 'react';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+    children?: React.ReactNode;
+    className?: string;
     variant?: 'critical' | 'high' | 'medium' | 'low' | 'default';
 }
 

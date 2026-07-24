@@ -4,6 +4,7 @@ import {
     ArrowDown, CheckCircle2, GitCommit, Users, Server, FileCode, TestTube, PlayCircle, Info
 } from 'lucide-react';
 import { Badge } from '../components/Badge';
+import { THEME_CLASSES } from '../lib/constants';
 
 export default function ResultView({ onNavigate }: { onNavigate: (view: string) => void }) {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -105,7 +106,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                     {activeTab === 'Overview' && (
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 shadow-sm">
+                                <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm`}>
                                     <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6">Change Risk Score</h3>
                                     <div className="flex items-center gap-6">
                                         <div className="text-6xl font-bold text-red-500">87</div>
@@ -129,7 +130,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363D] rounded-xl p-6 shadow-sm flex flex-col justify-center">
+                                <div className={`${THEME_CLASSES.cardBg} ${THEME_CLASSES.cardBorder} rounded-xl p-6 shadow-sm flex flex-col justify-center`}>
                                     <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">AI Executive Summary</h3>
                                     <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm">
                                         The rename of <code className="bg-gray-100 dark:bg-[#0D1117] px-1 py-0.5 rounded text-red-600 dark:text-red-400">UserDTO.email</code> to <code className="bg-gray-100 dark:bg-[#0D1117] px-1 py-0.5 rounded text-green-600 dark:text-green-400">UserDTO.primaryEmail</code> propagates through 3 backend services and breaks 2 public API endpoints. This change will directly cause runtime undefined errors in <span className="font-mono text-xs font-bold">ProfilePage.tsx</span> on the frontend. Two CI workflows require updates, and both the Identity and Frontend teams must review.
@@ -193,7 +194,7 @@ export default function ResultView({ onNavigate }: { onNavigate: (view: string) 
                             </div>
 
                             {/* Impact Inspector */}
-                            <div className="lg:col-span-4 bg-white dark:bg-[#161B22] rounded-xl border border-gray-200 dark:border-[#30363D] flex flex-col shadow-sm">
+                            <div className={`${THEME_CLASSES.cardBg} lg:col-span-4 rounded-xl ${THEME_CLASSES.cardBorder} flex flex-col shadow-sm`}>
                                 <div className="p-4 border-b border-gray-200 dark:border-[#30363D] bg-gray-50 dark:bg-[#21262D]">
                                     <h3 className="font-bold text-gray-900 dark:text-white">Impact Inspector</h3>
                                 </div>
