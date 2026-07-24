@@ -48,14 +48,23 @@ class GeminiService:
             """
             
             print("[GeminiService] Sending grounded remediation request")
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                ),
-            )
-            
+            try:
+                response = client.models.generate_content(
+                    model=os.getenv('GEMINI_MODEL', 'gemini-1.5-flash'),
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json"
+                    ),
+                )
+            except Exception as e:
+                # Handle model not found or other API errors gracefully
+                err_msg = str(e).lower()
+                if "model_not_found" in err_msg or "not_found" in err_msg:
+                    print("[GeminiService] Configured model unavailable, returning status.")
+                    return {"ai_status": "MODEL_UNAVAILABLE", "reason": str(e)}
+                print(f"[GeminiService] Exception during generation: {str(e)}")
+                return GeminiService.get_fallback_reasoning(context)
+
             if response.text:
                 print("[GeminiService] Remediation generated successfully")
                 result = json.loads(response.text)

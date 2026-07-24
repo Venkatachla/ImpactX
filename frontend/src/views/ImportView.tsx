@@ -54,7 +54,7 @@ export default function ImportView({ onNavigate }: { onNavigate: (path: string, 
                                     type="text" 
                                     value={path}
                                     onChange={(e) => setPath(e.target.value)}
-                                    placeholder="e.g. C:/Users/rohit/Downloads/ImpactX/demo-repo or git URL"
+                                    placeholder="e.g. C:/Users/Downloads/ImpactX/demo-repo or git URL"
                                     className="w-full bg-gray-50 dark:bg-[#0D1117] border border-gray-200 dark:border-[#30363D] text-gray-900 dark:text-gray-100 rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-shadow pr-10"
                                 />
                                 <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Specify local folder path to analyze directly.">
