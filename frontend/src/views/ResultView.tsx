@@ -69,15 +69,15 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                 <div className="p-6 md:px-8 md:py-6 flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-7xl mx-auto">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-bold font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/30">MERGE REQUEST #482</span>
+                            <span className="text-[10px] font-bold font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/30">LATEST COMMIT</span>
                             <span className="text-sm text-gray-500 dark:text-gray-400">{data.change.file}</span>
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                             {data.change.changeType}: {data.change.symbol} &rarr; {data.change.newValue}
                         </h2>
                         <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                            <span className="flex items-center gap-1">Analyzed just now</span>
-                            <span className="flex items-center gap-1">CI/CD Bot</span>
+                            <span className="flex items-center gap-1 font-mono">HEAD</span>
+                            <span className="flex items-center gap-1">Git Commit Analysis</span>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -110,7 +110,7 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                     
                     <div className="flex items-center gap-6 md:gap-8 shrink-0">
                         {[
-                            { label: 'Files', value: data.summary.files.toString() },
+                            { label: 'Affected Files', value: data.summary.files.toString() },
                             { label: 'Modules', value: data.summary.modules.toString() },
                             { label: 'Services', value: data.summary.services.toString() },
                             { label: 'APIs', value: data.summary.apis.toString() },
@@ -374,9 +374,9 @@ export default function ResultView({ onNavigate, analysisData, onPromote }: Resu
                                     <div className="px-4 py-3 bg-gray-50 dark:bg-[#21262D] border-b border-gray-200 dark:border-[#30363D] flex justify-between items-center">
                                         <div className="flex items-center gap-3">
                                             <Badge variant="critical">Critical</Badge>
-                                            <span className="font-mono text-sm font-bold text-gray-900 dark:text-gray-200">ProfilePage.tsx</span>
+                                            <span className="font-mono text-sm font-bold text-gray-900 dark:text-gray-200">{data.change?.file ? data.change.file.split('/').pop() : 'Affected Component'}</span>
                                         </div>
-                                        <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400">L142-148</span>
+                                        <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400">L1-10</span>
                                     </div>
                                     <div className="p-5 space-y-4">
                                         <p className="text-sm text-gray-700 dark:text-gray-300">

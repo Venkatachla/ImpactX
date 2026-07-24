@@ -1,0 +1,14 @@
+# Runtime repositories cloned by ImpactX
+cloned_repos/
+
+# Secrets
+.env
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Frontend
+node_modules/
+dist/

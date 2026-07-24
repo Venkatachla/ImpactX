@@ -49,17 +49,20 @@ class RiskEngine:
             breakdown.append({"factor": "Critical Area (Authentication/Identity component)", "score": 10})
 
         # 6. CI Impact (0-5)
-        score += 5
-        breakdown.append({"factor": "CI trigger workflow affected", "score": 5})
+        # Only add CI risk score contribution if any workflows exist
+        # We can pass an optional workflows parameter or check node pathways
+        has_ci_impact = any("ci" in node_id.lower() or "workflow" in node_id.lower() for node_id in impacted_nodes.keys())
+        if has_ci_impact:
+            score += 5
+            breakdown.append({"factor": "CI trigger workflow affected", "score": 5})
         
         # 7. Multiple Teams affected (0-5)
-        # Determine number of teams based on heuristics
-        has_frontend = any("frontend" in node_data.get("path", "") for node_data in impacted_nodes.values())
-        has_backend = any("backend" in node_data.get("path", "") for node_data in impacted_nodes.values())
+        has_frontend = any("frontend" in node_data.get("path", "").lower() for node_data in impacted_nodes.values())
+        has_backend = any("backend" in node_data.get("path", "").lower() for node_data in impacted_nodes.values())
         if has_frontend and has_backend:
             score += 5
             breakdown.append({"factor": "Cross-team impact (Identity & Frontend Teams)", "score": 5})
-        else:
+        elif impacted_nodes:
             score += 2
             breakdown.append({"factor": "Single team domain impact", "score": 2})
 

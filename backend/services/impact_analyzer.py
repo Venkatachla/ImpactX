@@ -61,21 +61,19 @@ class ImpactAnalyzer:
             # We want to traverse from Dependency to Dependent.
             # Let's trace in both directions but filter to make sure it's a dependent:
             # Outward edges:
+            # Outward edges (Dependency -> Dependent, so successor is impacted):
             for successor in graph.successors(current_node):
                 edge_data = graph.get_edge_data(current_node, successor)
                 rel = edge_data.get("relationship")
-                # e.g. Class CONTAINS Method, so Method depends on Class.
-                # Class EXPOSES API, so API depends on Class.
-                if rel in {"CONTAINS", "EXPOSES", "DEPENDS_ON", "RETURNS", "CONSUMES", "IMPORTS"}:
+                # Do NOT follow containment/defining relationships like CONTAINS or DEFINES.
+                if rel in {"EXPOSES", "RETURNS", "CONSUMES", "IMPORTS", "DEPENDS_ON", "USES", "CALLS"}:
                     if successor not in visited:
                         neighbors.append(successor)
                         
-            # Inward edges:
+            # Inward edges (Dependent -> Dependency, so predecessor is impacted):
             for predecessor in graph.predecessors(current_node):
                 edge_data = graph.get_edge_data(predecessor, current_node)
                 rel = edge_data.get("relationship")
-                # e.g. Controller CALLS UserService, so Controller depends on UserService.
-                # React Page CONSUMES API, so Page depends on API.
                 if rel in {"CALLS", "CONSUMES", "DEPENDS_ON", "USES"}:
                     if predecessor not in visited:
                         neighbors.append(predecessor)
